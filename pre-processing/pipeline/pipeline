@@ -1,0 +1,10 @@
+#!/bin/bash
+rm -f ~/thesis/out/*
+
+export usearch=~/thesis/bin/usearch
+./merge
+./filter
+./uniques
+./otus
+./otutable
+./otutree

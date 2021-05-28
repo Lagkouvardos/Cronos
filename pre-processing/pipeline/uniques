@@ -1,0 +1,4 @@
+#!/bin/bash
+$usearch -fastx_uniques ~/thesis/out/filtered.fa \
+-fastaout ~/thesis/out/uniques.fa \
+-relabel Uniq -sizeout

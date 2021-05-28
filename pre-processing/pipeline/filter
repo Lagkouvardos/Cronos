@@ -1,0 +1,3 @@
+#!/bin/bash
+$usearch -fastq_filter ~/thesis/out/merged.fq -fastq_maxee 1.0 \
+-fastaout ~/thesis/out/filtered.fa
