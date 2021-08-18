@@ -9,11 +9,11 @@
 setwd("~/Working_Chronos/")  #<--- CHANGE ACCORDINGLY !!!
 
 #' Please give the file name of the normalized OTU-table without taxonomic classification
-input_otu = "OTUs-Table_kalo.csv"              #<--- CHANGE ACCORDINGLY !!!
+input_otu = "OTUs_Table.csv"              #<--- CHANGE ACCORDINGLY !!!
 #' Please give the name of the meta-file that contains individual sample information
 input_meta = "Map_OTUs"                #<--- CHANGE ACCORDINGLY !!!
 #' Please give the name of the phylogenetic tree constructed from the OTU sequences
-input_tree = "microbiome-master/down-stream-analysis/data/otus/infants/OTUs-NJTree.tre"                   #<--- CHANGE ACCORDINGLY !!!
+input_tree = "OTUs-NJTree.tre"                   #<--- CHANGE ACCORDINGLY !!!
 
 # Please select the taxon in which the samples will be analyzed
 # Either type it in ' ' e.g. 'Order' or select a number between 1 and 5, where:
@@ -24,6 +24,11 @@ input_tree = "microbiome-master/down-stream-analysis/data/otus/infants/OTUs-NJTr
 # 5: Family
 
 taxonomic_level=3  #### <---- CHANGE ACCORDINGLY
+
+
+# Please select method with which the optimal number of clusters will be selected
+# Could be either Drop or Highest
+method='Drop'
 
 ######################### END OF SECTION #################################################
 
@@ -151,55 +156,83 @@ unifracs <- GUniFrac(otu.tab = otu_file ,tree = rooted_tree, alpha = c(0.0,0.5,1
 
 # Weight on abundant lineages so the distance is not dominated by highly abundant lineages with 0.5 having the best power
 unifract_dist <- unifracs[, , "d_0.5"]
-
+unifract_dist
 ######################### END OF SECTION #################################################
 
 
+##########################################################################################
+############# CLUSTERING #################################################################
+##########################################################################################
+
+k=4
+
 ################ PRACTICE ############################
 
-### PALIO
-timepoint_collection<- function(otu_file,meta_file){
+kentra<- sample(x = row.names(unifract_dist), size = k)
+
+clustering_function <-function(unifract_dist,k,kentra){
   
-  timepoints=unique(meta_file[,'Timepoint'])
-  timepoint_list<-vector(length(timepoints))
-  timepoints
-  for (i in timepoints){
-    print (i)
-    timepoint_list[[i]] = otu_file[meta_file[,'Timepoint']==i,]
+  
+  distances <- function(unifract_dist,kentra,k) {
+    
+    apostaseis<- matrix(0,nrow = nrow(unifract_dist), ncol = k)
+    for (i in 1:nrow(unifract_dist)){
+      for (j in 1:k){
+        apostaseis[i,j]= unifract_dist[i,kentra[j]]
+      }
+      apostaseis[i,]=apostaseis[i,]==min(apostaseis[i,])
+    }
+    return (apostaseis)
   }
   
-  return (timepoint_list)
-}
-
-timepoint_list= timepoint_collection(otu_file,meta_file)
-timepoint_list[[1]]
-length(timepoint_list)
-length(timepoint_list[[5]])
-
-
-timepoint_list
-b<-unique(meta_file[,'Timepoint'])
-for (i in b){
-  print (length(timepoint_list[[i]]))
+  medoids<- function(unifract_dist,apostaseis,kentra){
+    for (i in 1:k){
+      kentra[i] <- row.names(unifract_dist[apostaseis[,i]==1,apostaseis[,i]==1])[which.min(apply(X = unifract_dist[apostaseis[,i]==1,apostaseis[,i]==1], FUN = mean,MARGIN=2))]
+      }
+    return (kentra)
+  }
   
+  matequal <- function(x, y){
+    return (is.matrix(x) && is.matrix(y) && dim(x) == dim(y) && all(x == y))
+  }
+  
+  apostaseis <- matrix(1,nrow = nrow(unifract_dist), ncol = k)
+  palies_apostaseis <- matrix(0,nrow = nrow(unifract_dist), ncol = k)
+  palia_kentra<- c()
+  while (!(matequal(apostaseis,palies_apostaseis) && all(kentra==palia_kentra))) {
+    palia_kentra<- kentra
+    palies_apostaseis<- apostaseis
+    apostaseis<- distances(unifract_dist = unifract_dist, kentra = kentra,k = k)
+    kentra<- medoids(unifract_dist = unifract_dist, apostaseis = apostaseis, kentra = kentra)
+  }
+  return (apply(apostaseis, FUN = which.max, MARGIN = 1))
 }
 
 
 
-timepoints=unique(meta_file[,'Timepoint'])
-timepoints
-t<-vector('list')
-t[1]<-otu_file[meta_file[,'Timepoint']==i,]
-t
-
-
-#### PRACTICE TAXONOMY 
-taxa_selected<- unique(otus_taxonomic[,'taxonomy'])
-taxa_selected
-taxa<- matrix(0,nrow = length(taxa_selected),ncol = ncol(otus_taxonomic)-1)
-colnames(taxa)<- head(colnames(otu_file),-1)
-row.names(taxa)<- taxa_selected
-for (i in 1:length(taxa_selected)){
-  taxa[i,] = colSums(otus_taxonomic[otus_taxonomic['taxonomy']==taxa_selected[i],1:ncol(otus_taxonomic)-1])
+optimal_k<- function(unifract_dist, method){
+  calinski_harabasz_values <-c()
+  for (k in 3:12){
+    kentra<- sample(x = row.names(unifract_dist), size = k)
+    calinski_harabasz_values= c(calinski_harabasz_values,(calinhara(x = unifract_dist,cn = k, clustering = clustering_function(unifract_dist = unifract_dist,k = k,kentra = kentra ))))
+  }
+  print (diff(calinski_harabasz_values))
+  if (method=='Drop'){
+    kalitero<- which.min(diff(calinski_harabasz_values))+1
+  }
+  else if (method=='Highest'){
+    kalitero<- which.max(calinski_harabasz_values)
+  }
+  return (kalitero)
 }
-taxa
+
+k=optimal_k(unifract_dist = unifract_dist, method = method)
+k
+clusters <- clustering_function(unifract_dist = unifract_dist,k = k, kentra = sample(x = row.names(unifract_dist), size = k))
+
+
+samples_on_clusters<-list()
+for (i in 1:k){
+  samples_on_clusters[[i]] <- as.vector(row.names(otu_file)[clusters==k])
+}
+samples_on_clusters[2]
