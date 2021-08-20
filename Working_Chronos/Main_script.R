@@ -87,9 +87,10 @@ taxa_matrix<-function(otus_taxonomic,otu_file){
   for (i in 1:length(taxa_selected)){
     taxa[i,] = colSums(otus_taxonomic[otus_taxonomic['taxonomy']==taxa_selected[i],1:ncol(otus_taxonomic)-1])
   }
-  return (taxa)
+  return (prop.table(x = taxa,margin = 2))
 }
 taxa_matrix<- taxa_matrix(otus_taxonomic,otu_file)
+taxa_matrix <- data.frame(t(taxa_matrix))
 
 ######################### END OF SECTION #################################################
 
@@ -150,17 +151,13 @@ timepoint_collection <- function(otu_file,meta_file){
   return (timepoint_list)
 }
 timepoint_list <- timepoint_collection(otu_file,meta_file = meta_file)
-timepoint_list[['1']]
-
-unique(meta_file[,'Sample'])
 
 
 # Create a matrix to save the sample clusters by timepoint
 samples_on_clusters<-matrix(0, ncol = length(timepoint_list), nrow= nrow(unique(meta_file['Sample'])))
-samples_on_clusters
 row.names(samples_on_clusters)<- unique(meta_file[,'Sample'])
 colnames(samples_on_clusters)<- names(timepoint_list)
-samples_on_clusters
+
 ######################### END OF SECTION #################################################
 
 ##########################################################################################
@@ -182,10 +179,10 @@ unifract_dist
 ##########################################################################################
 
 k=2
-
-
-
 kentra<- sample(x = row.names(unifract_dist), size = k)
+
+
+
 
 clustering_function <-function(unifract_dist,k,kentra){
   
@@ -264,20 +261,29 @@ optimal_k<- function(unifract_dist, method){
 }
 
 k=optimal_k(unifract_dist = unifract_dist, method = method)
-
+print (k)
 clusters <- clustering_function(unifract_dist = unifract_dist,k = k, kentra = sample(x = row.names(unifract_dist), size = k))[[1]]
-clusters
 
 
-samples_on_clusters
 samples_on_clusters[meta_file[row.names(unifract_dist),'Sample'],name]<- clusters
 }
 
 samples_on_clusters
 ############## PRACTICE ############################
+
+row.names(samples_on_clusters[samples_on_clusters[,3]==1,])
+
+paste(row.names(samples_on_clusters[samples_on_clusters[,3]==1,])[1],meta_file[1,'Timepoint'],sep = '0')
+
+
+taxa_matrix[paste(row.names(samples_on_clusters[samples_on_clusters[,3]==1,])[1],meta_file[1,'Timepoint'],sep = '0'),]
+
+taxa_clusters <- matrix(0, nrow = nrow(samples_on_clusters), ncol = ncol(taxa_matrix)) 
+
+
+
+############## COMMENTS ############################
 # Καταλήγω με πίνακα που θα έχει τα διαφορετικά clusters ανά δείγμα και ως features
 # 27 δείγματα είναι πολύ λίγα για random forest, ειδικά χωρίς features.
 # Ίσως η ποσόστωση των τάξων βολεψει για ´features, αλλά δεν είναι σίγουρο
 # Στον dissimilarity δεν γίνεται classification γιατί έχει διαφορετικά timepoints
-
-
