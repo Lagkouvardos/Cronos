@@ -272,11 +272,12 @@ clusters
 samples_on_clusters
 samples_on_clusters[meta_file[row.names(unifract_dist),'Sample'],name]<- clusters
 }
+
 samples_on_clusters
-############## PRACTISE ############################
-# Καταλήγω με πίνακα που θα έχει τα διαφορετικά clusters ανά δείγμα και ως features τι;;
+############## PRACTICE ############################
+# Καταλήγω με πίνακα που θα έχει τα διαφορετικά clusters ανά δείγμα και ως features
 # 27 δείγματα είναι πολύ λίγα για random forest, ειδικά χωρίς features.
-# Ίσως η ποσόστοση των τάξων βολεψει για ´features, αλλά δεν είναι σίγουρο
+# Ίσως η ποσόστωση των τάξων βολεψει για ´features, αλλά δεν είναι σίγουρο
 # Στον dissimilarity δεν γίνεται classification γιατί έχει διαφορετικά timepoints
 
 
