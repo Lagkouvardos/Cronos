@@ -9,11 +9,11 @@
 setwd("~/Working_Chronos/")  #<--- CHANGE ACCORDINGLY !!!
 
 #' Please give the file name of the normalized OTU-table without taxonomic classification
-input_otu = "OTUs_Table.csv"              #<--- CHANGE ACCORDINGLY !!!
+input_otu = "OTUs-TableIS.tab"              #<--- CHANGE ACCORDINGLY !!!
 #' Please give the name of the meta-file that contains individual sample information
-input_meta = "Map_OTUs"                #<--- CHANGE ACCORDINGLY !!!
+input_meta = "Map_OTUsIS"                #<--- CHANGE ACCORDINGLY !!!
 #' Please give the name of the phylogenetic tree constructed from the OTU sequences
-input_tree = "OTUs-NJTree.tre"                   #<--- CHANGE ACCORDINGLY !!!
+input_tree = "OTUs-NJTree.treIS"                   #<--- CHANGE ACCORDINGLY !!!
 
 # Please select the taxon in which the samples will be analyzed
 # Either type it in ' ' e.g. 'Order' or select a number between 1 and 5, where:
@@ -28,7 +28,11 @@ taxonomic_level=3  #### <---- CHANGE ACCORDINGLY
 
 # Please select method with which the optimal number of clusters will be selected
 # Could be either Drop or Highest
-method='Drop'
+clustering_method='Drop'  # <---- CHANGE ACCORDINGL
+
+# Please select method to declare the transition matrix
+# It can be: mle (Maximum Likelihood Estimation), map (Maximum a posteriori) or  bootstrap
+markov_method= 'mle'
 
 ######################### END OF SECTION #################################################
 
@@ -113,7 +117,7 @@ otu_file <- data.frame(t(otu_file))
 ############### CHECKING FOR AND INSTALLING PACKAGES  ####################################
 ##########################################################################################
 
-packages <-c("ade4","GUniFrac","phangorn","cluster","fpc") 
+packages <-c("ade4","GUniFrac","phangorn","cluster","fpc","markovchain") 
 # Function to check whether the package is installed
 InsPack <- function(pack)
 {
@@ -170,7 +174,7 @@ unifracs <- GUniFrac(otu.tab = timepoint_list[[name]] ,tree = rooted_tree, alpha
 
 # Weight on abundant lineages so the distance is not dominated by highly abundant lineages with 0.5 having the best power
 unifract_dist <- unifracs[, , "d_0.5"]
-unifract_dist
+
 ######################### END OF SECTION #################################################
 
 
@@ -260,26 +264,29 @@ optimal_k<- function(unifract_dist, method){
   return (kalitero)
 }
 
-k=optimal_k(unifract_dist = unifract_dist, method = method)
-print (k)
+k=optimal_k(unifract_dist = unifract_dist, method = clustering_method)
 clusters <- clustering_function(unifract_dist = unifract_dist,k = k, kentra = sample(x = row.names(unifract_dist), size = k))[[1]]
 
 
 samples_on_clusters[meta_file[row.names(unifract_dist),'Sample'],name]<- clusters
 }
 
-samples_on_clusters
+# samples_on_clusters
+
+##########################################################################################
+######################## DECLARE TRANSITION MATRIX  ######################################
+##########################################################################################
+
+# Exclude the infants of the dataset
+infants<- samples_on_clusters[samples_on_clusters[,'MM']==0,1:ncol(samples_on_clusters)-1]
+
+# Create the markovian transition matrix
+markovestimation <- markovchainFit(as.character(infants), method = markov_method, byrow = T)
+transition_matrix <- t(markovestimation$estimate)
+transition_matrix
+
+
 ############## PRACTICE ############################
-
-row.names(samples_on_clusters[samples_on_clusters[,3]==1,])
-
-paste(row.names(samples_on_clusters[samples_on_clusters[,3]==1,])[1],meta_file[1,'Timepoint'],sep = '0')
-
-
-taxa_matrix[paste(row.names(samples_on_clusters[samples_on_clusters[,3]==1,])[1],meta_file[1,'Timepoint'],sep = '0'),]
-
-taxa_clusters <- matrix(0, nrow = nrow(samples_on_clusters), ncol = ncol(taxa_matrix)) 
-
 
 
 ############## COMMENTS ############################
