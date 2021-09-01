@@ -111,6 +111,7 @@ otu_file <- otu_file[,rownames(meta_file)]
 otu_file <- otu_file[,order(names(otu_file))]
 # Transpose OTU-table and convert format to a data frame
 otu_file <- data.frame(t(otu_file))
+
 ######################### END OF SECTION #################################################
 
 ##########################################################################################
@@ -176,7 +177,6 @@ unifracs <- GUniFrac(otu.tab = timepoint_list[[name]] ,tree = rooted_tree, alpha
 unifract_dist <- unifracs[, , "d_0.5"]
 
 ######################### END OF SECTION #################################################
-
 
 ##########################################################################################
 ############# CLUSTERING #################################################################
@@ -271,7 +271,7 @@ clusters <- clustering_function(unifract_dist = unifract_dist,k = k, kentra = sa
 samples_on_clusters[meta_file[row.names(unifract_dist),'Sample'],name]<- clusters
 }
 
-# samples_on_clusters
+######################### END OF SECTION #################################################
 
 ##########################################################################################
 ######################## DECLARE TRANSITION MATRIX  ######################################
@@ -280,11 +280,40 @@ samples_on_clusters[meta_file[row.names(unifract_dist),'Sample'],name]<- cluster
 # Exclude the infants of the dataset
 infants<- samples_on_clusters[samples_on_clusters[,'MM']==0,1:ncol(samples_on_clusters)-1]
 
-# Create the markovian transition matrix
-markovestimation <- markovchainFit(as.character(infants), method = markov_method, byrow = T)
-transition_matrix <- t(markovestimation$estimate)
-transition_matrix
+# Create the markovian transition matrix for each combination of timepoints and save them
 
+transition_matrices <- list()
+for (i in colnames(infants)){
+  for (j in colnames(infants)){
+    if (as.numeric(i) < as.numeric(j)){
+      markovestimation <- markovchainFit(as.character(infants[,c(i,j)]), method = markov_method, byrow = T)
+      transition_matrices[[paste(i,j,sep = '_')]] <- t(markovestimation$estimate)
+    }
+  }
+}
+transition_matrices
+
+######################### END OF SECTION #################################################
+
+##########################################################################################
+######################## SPECIFY TAXA ON CLUSTERS   ######################################
+##########################################################################################
+
+
+taxa_per_cluster <- function(taxa_matrix,samples_on_clusters,timepoint_list){
+  taxa_clusters <- list()
+  for (i in names(timepoint_list)){
+    for (j in 1:max(samples_on_clusters)){
+      taxa_clusters[[paste(as.character(i),as.character(j),sep = 'c')]] <- as.matrix(sort(x = apply(X = taxa_matrix[paste(rownames(samples_on_clusters[samples_on_clusters[,i]==j,]),i,sep = ''),], MARGIN = 2, FUN = mean),decreasing = T)[1:2])      }
+  }
+  return (taxa_clusters[-which(unlist(lapply(X= lapply(X = taxa_clusters,FUN = is.na),FUN = any)))])
+}
+
+taxa_clusters <- taxa_per_cluster(taxa_matrix = taxa_matrix, samples_on_clusters = samples_on_clusters, timepoint_list = timepoint_list)
+
+taxa_clusters
+
+######################### END OF SECTION #################################################
 
 ############## PRACTICE ############################
 
