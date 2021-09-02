@@ -23,7 +23,7 @@ input_tree = "OTUs-NJTree.treIS"                   #<--- CHANGE ACCORDINGLY !!!
 # 4: Order
 # 5: Family
 
-taxonomic_level=3  #### <---- CHANGE ACCORDINGLY
+taxonomic_level=5  #### <---- CHANGE ACCORDINGLY
 
 
 # Please select method with which the optimal number of clusters will be selected
@@ -292,7 +292,6 @@ for (i in colnames(infants)){
   }
 }
 transition_matrices
-
 ######################### END OF SECTION #################################################
 
 ##########################################################################################
@@ -315,8 +314,26 @@ taxa_clusters
 
 ######################### END OF SECTION #################################################
 
-############## PRACTICE ############################
+##########################################################################################
+################ PLOT TRANSITION PROBABILITIES ON DIRECTORY  #############################
+##########################################################################################
 
+dir.create('Transition_Plots')
+
+for (name in names(transition_matrices)){
+  jpeg(filename =paste('Transition_Plots', paste(paste(unlist(strsplit(name,split = '_'))[1],unlist(strsplit(name,split = '_'))[2], sep = ' to '), 'timepoints', sep = ' '),sep = '/'))
+  plot(transition_matrices[[name]], name = name)
+  dev.off()
+  
+}
+
+######################### END OF SECTION #################################################
+
+
+
+
+
+############## PRACTICE ############################
 
 ############## COMMENTS ############################
 # Καταλήγω με πίνακα που θα έχει τα διαφορετικά clusters ανά δείγμα και ως features ????
