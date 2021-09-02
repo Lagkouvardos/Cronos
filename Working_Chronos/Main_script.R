@@ -6,14 +6,19 @@
 
 #' Please set the directory of the script as the working folder (e.g D:/studyname/Data/Chronos/)
 #' Note: the path is denoted by forward slash "/"
-setwd("~/Working_Chronos/")  #<--- CHANGE ACCORDINGLY !!!
+setwd("~/Working_Chronos/")              #<--- CHANGE ACCORDINGLY !!!
 
 #' Please give the file name of the normalized OTU-table without taxonomic classification
-input_otu = "OTUs-TableIS.tab"              #<--- CHANGE ACCORDINGLY !!!
+input_otu = "OTUs-TableIS.tab"           #<--- CHANGE ACCORDINGLY !!!
 #' Please give the name of the meta-file that contains individual sample information
 input_meta = "Map_OTUsIS"                #<--- CHANGE ACCORDINGLY !!!
 #' Please give the name of the phylogenetic tree constructed from the OTU sequences
-input_tree = "OTUs-NJTree.treIS"                   #<--- CHANGE ACCORDINGLY !!!
+input_tree = "OTUs-NJTree.treIS"         #<--- CHANGE ACCORDINGLY !!!
+
+# Please specify if the file contains both adult and infant data: 
+# If it contains adult data specify the name of the column (i.e. timepoint name) where they are saved
+adult_timepoint_name = 'MM'              #<--- CHANGE ACCORDINGLY
+
 
 # Please select the taxon in which the samples will be analyzed
 # Either type it in ' ' e.g. 'Order' or select a number between 1 and 5, where:
@@ -186,8 +191,6 @@ k=2
 kentra<- sample(x = row.names(unifract_dist), size = k)
 
 
-
-
 clustering_function <-function(unifract_dist,k,kentra){
   
   lis <- list()
@@ -278,7 +281,7 @@ samples_on_clusters[meta_file[row.names(unifract_dist),'Sample'],name]<- cluster
 ##########################################################################################
 
 # Exclude the infants of the dataset
-infants<- samples_on_clusters[samples_on_clusters[,'MM']==0,1:ncol(samples_on_clusters)-1]
+infants<- samples_on_clusters[samples_on_clusters[,adult_timepoint_name]==0,1:ncol(samples_on_clusters)-1]
 
 # Create the markovian transition matrix for each combination of timepoints and save them
 
@@ -328,8 +331,6 @@ for (name in names(transition_matrices)){
 }
 
 ######################### END OF SECTION #################################################
-
-
 
 
 
