@@ -28,7 +28,7 @@ adult_timepoint_name = 'MM'              #<--- CHANGE ACCORDINGLY
 # 4: Order
 # 5: Family
 
-taxonomic_level=4                          # <---- CHANGE ACCORDINGLY
+taxonomic_level=3                          # <---- CHANGE ACCORDINGLY
 
 
 # Please select method with which the optimal number of clusters will be selected
@@ -113,8 +113,6 @@ for (i in rownames(meta_file)){
   kati_allo <- append(kati_allo, paste(ifelse(nchar(i)==2,yes = "X0",no = "X"),meta_file[i,'Sample'], sep = "")) 
 }
 rownames(meta_file) <- kati
-meta_file[,"Sample"]
-kati_allo
 meta_file[,'Sample'] <- kati_allo
 # keep only those rows that appear in the mapping file
 otu_file <- otu_file[,rownames(meta_file)]
@@ -302,7 +300,6 @@ for (i in colnames(infants)){
     }
   }
 }
-transition_matrices
 ######################### END OF SECTION #################################################
 
 ##########################################################################################
@@ -340,7 +337,6 @@ for (name in names(transition_matrices)){
 
 ######################### END OF SECTION #################################################
 
-meta_file[,'Sample']
 
 ############## PRACTICE ############################
 
