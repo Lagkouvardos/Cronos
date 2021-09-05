@@ -6,12 +6,12 @@
 
 #' Please set the directory of the script as the working folder (e.g D:/studyname/Data/Chronos/)
 #' Note: the path is denoted by forward slash "/"
-setwd("~/Working_Chronos/")              #<--- CHANGE ACCORDINGLY !!!
+setwd("~/Working_Chronos/Chronos_almost")              #<--- CHANGE ACCORDINGLY !!!
 
 #' Please give the file name of the normalized OTU-table without taxonomic classification
 input_otu = "OTUs-TableIS.tab"           #<--- CHANGE ACCORDINGLY !!!
 #' Please give the name of the meta-file that contains individual sample information
-input_meta = "Meta_Inf_Stud.txt"                #<--- CHANGE ACCORDINGLY !!!
+input_meta = "Meta_Inf_Stud.tab"                #<--- CHANGE ACCORDINGLY !!!
 #' Please give the name of the phylogenetic tree constructed from the OTU sequences
 input_tree = "OTUs-NJTree.treIS"         #<--- CHANGE ACCORDINGLY !!!
 
@@ -28,16 +28,23 @@ adult_timepoint_name = 'MM'              #<--- CHANGE ACCORDINGLY
 # 4: Order
 # 5: Family
 
-taxonomic_level=3                          # <---- CHANGE ACCORDINGLY
+taxonomic_level=4                          # <---- CHANGE ACCORDINGLY
 
 
 # Please select method with which the optimal number of clusters will be selected
 # Could be either Drop or Highest
-clustering_method='Drop'                # <---- CHANGE ACCORDINGLy
+clustering_method='Highest'                # <---- CHANGE ACCORDINGLY
 
 # Please select method to declare the transition matrix
 # It can be: mle (Maximum Likelihood Estimation), map (Maximum a posteriori) or  bootstrap
 markov_method= 'mle'
+
+# Please write the names of the 2 new directories, in which the output should be saved at:
+# Firstly, the one for the transition plots
+dir_with_plots= 'Transition_Plots'     # <---- CHANGE ACCORDINGLY
+# Secondly, the one with the files
+dir_with_files= 'Chronos_output_files' # <---- CHANGE ACCORDINGLY
+
 
 ######################### END OF SECTION #################################################
 
@@ -110,10 +117,11 @@ kati <- c()
 kati_allo <-c()
 for (i in rownames(meta_file)){
   kati<- append(kati, paste(ifelse(nchar(i)==5,yes = 'X',no = 'X0'), i, sep = ""))
-  kati_allo <- append(kati_allo, paste(ifelse(nchar(i)==2,yes = "X0",no = "X"),meta_file[i,'Sample'], sep = "")) 
+  kati_allo <- append(kati_allo, paste(ifelse(nchar(meta_file[i,'Sample'])==2,yes = "X0",no = "X"),meta_file[i,'Sample'], sep = "")) 
 }
 rownames(meta_file) <- kati
 meta_file[,'Sample'] <- kati_allo
+meta_file
 # keep only those rows that appear in the mapping file
 otu_file <- otu_file[,rownames(meta_file)]
 # OTU-table and mapping file should have the same order and number of sample names
@@ -310,15 +318,23 @@ for (i in colnames(infants)){
 taxa_per_cluster <- function(taxa_matrix,samples_on_clusters,timepoint_list){
   taxa_clusters <- list()
   for (i in names(timepoint_list)){
-    for (j in 1:max(samples_on_clusters)){
-      taxa_clusters[[paste(as.character(i),as.character(j),sep = 'c')]] <- as.matrix(sort(x = apply(X = taxa_matrix[paste(rownames(samples_on_clusters[samples_on_clusters[,i]==j,]),i,sep = ''),], MARGIN = 2, FUN = mean),decreasing = T)[1:2])      }
+    for (j in 1:max(samples_on_clusters[,i])){
+      taxa_clusters[[paste(as.character(i),as.character(j),sep = ' cluster ')]] <- as.matrix(x = apply(X = taxa_matrix[paste(rownames(samples_on_clusters[samples_on_clusters[,i]==j,]),i,sep = ''),], MARGIN = 2, FUN = mean),decreasing = T)      
+      }
   }
-  return (taxa_clusters[-which(unlist(lapply(X= lapply(X = taxa_clusters,FUN = is.na),FUN = any)))])
+  clustering_taxa <- matrix(0,  nrow = ncol(taxa_matrix), ncol = length(taxa_clusters))
+  row.names(clustering_taxa)<- colnames(taxa_matrix)
+  colnames(clustering_taxa)<- names(taxa_clusters)
+  for (i in colnames(clustering_taxa)){
+    for (j in rownames(clustering_taxa)){
+      clustering_taxa[j,i] <- taxa_clusters[[i]][j,]
+    }
+  }
+  return (clustering_taxa)
 }
 
-taxa_clusters <- taxa_per_cluster(taxa_matrix = taxa_matrix, samples_on_clusters = samples_on_clusters, timepoint_list = timepoint_list)
 
-taxa_clusters
+taxa_clusters <- taxa_per_cluster(taxa_matrix = taxa_matrix, samples_on_clusters = samples_on_clusters, timepoint_list = timepoint_list)
 
 ######################### END OF SECTION #################################################
 
@@ -326,7 +342,7 @@ taxa_clusters
 ################ PLOT TRANSITION PROBABILITIES ON DIRECTORY  #############################
 ##########################################################################################
 
-dir.create('Transition_Plots')
+dir.create(dir_with_plots)
 
 for (name in names(transition_matrices)){
   jpeg(filename =paste('Transition_Plots', paste(paste(unlist(strsplit(name,split = '_'))[1],unlist(strsplit(name,split = '_'))[2], sep = ' to '), 'timepoints', sep = ' '),sep = '/'))
@@ -338,8 +354,23 @@ for (name in names(transition_matrices)){
 ######################### END OF SECTION #################################################
 
 
-############## PRACTICE ############################
+##########################################################################################
+################ WRITE TAB DELIMITED FILES WITH THE OUTPUTS  #############################
+##########################################################################################
 
+
+dir.create(dir_with_files)
+
+
+colnames(taxa_clusters)<-lapply(X = colnames(taxa_clusters), FUN = function(x){paste('Timepoint',x,sep = ' ')})
+row.names(samples_on_clusters) <- lapply(X = rownames(samples_on_clusters), FUN = function(x){substr(x,start=2,stop= 4)})
+
+write.csv(x = samples_on_clusters, file = paste(dir_with_files, "Samples_in_Timepoint-specific_Clusters.csv",sep = '/'), row.names = T)
+write.csv(x = taxa_clusters,       file = paste(dir_with_files, "Taxonomic_profile_of_clusters.csv", sep = '/'), row.names = T)
+
+######################### END OF SECTION #################################################
+
+############## PRACTICE ############################
 
 ############## COMMENTS ############################
 # Καταλήγω με πίνακα που θα έχει τα διαφορετικά clusters ανά δείγμα και ως features ????
