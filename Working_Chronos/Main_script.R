@@ -348,6 +348,16 @@ for (name in names(transition_matrices)){
 
 ############## PRACTICE ############################
 
+install.packages('dplyr', dependencies = T)
+library(dplyr)
+
+ps <- c()
+for (i in 1:nrow(infants)) {
+  ps[i] <- verifyMarkovProperty(infants[i,])$p.value
+}
+ps
+
+
 ############## COMMENTS ############################
 # Καταλήγω με πίνακα που θα έχει τα διαφορετικά clusters ανά δείγμα και ως features ????
 # 27 δείγματα είναι πολύ λίγα για random forest, ειδικά χωρίς features.
