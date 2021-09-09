@@ -192,7 +192,7 @@ colnames(samples_on_clusters)<- names(timepoint_list)
 ######################### END OF SECTION #################################################
 
 ##########################################################################################
-############# CALCULATE ALL UNIFRAC DISTANCES OF SAMPLES PER TIMEPOINT ###################
+################ CLUSTERING SAMPLES ON TIMEPOINTS ########################################
 ##########################################################################################
 # Calculate the UniFrac distance matrix for comparing microbial communities
 for (name in names(timepoint_list)){
@@ -201,12 +201,6 @@ unifracs <- GUniFrac(otu.tab = timepoint_list[[name]] ,tree = rooted_tree, alpha
 
 # Weight on abundant lineages so the distance is not dominated by highly abundant lineages with 0.5 having the best power
 unifract_dist <- unifracs[, , "d_0.5"]
-
-######################### END OF SECTION #################################################
-
-##########################################################################################
-############# CLUSTERING #################################################################
-##########################################################################################
 
 PAM_clustering <- function(unifract_dist,k){
   return (pam(x = unifract_dist, k = 4,diss = T)$clustering)
@@ -376,22 +370,37 @@ testaki$statistics["X-squared"]
 
 
 
+##########################################################################################
+################ PLOT PRINCIPAL COMPONENTS FOR ALL TIMEPOINTS ############################
+##########################################################################################
+
+normalize <- function(x, na.rm = TRUE) {
+  return((x- min(x)) /(max(x)-min(x)))
+}
+for (tt1 in names(timepoint_list)){
+  dir.create('Principal Component Analysis',showWarnings = F)
+  tt2= timepoint_list[[tt1]][,colSums(timepoint_list[[tt1]])!=0]
+  tt2 = normalize(tt2)
+  tt = prcomp(x = tt2,scale. = F, center = T)
+  ttt = summary(tt)
+  jpeg(filename = paste('Principal Component Analysis',paste(paste('Timepoint', tt1, sep = ' '),'jpeg',sep = '.'),sep = '/'))
+  plot(ttt$x[,1],ttt$x[,2],main = paste('Timepoint', tt1, sep = ' ') ,xlab = paste ((ttt$importance[2,1]*100),'%', sep = ' '), ylab = paste((ttt$importance[2,2]*100),'%',sep = ' '))
+  dev.off()
+}
+
+######################### END OF SECTION #################################################
+
+
 ############## PRACTICE ############################
 
 
 
-lapply(rownames(samples_on_clusters),FUN = function(x){paste('X',x, sep = "")})
+#lapply(rownames(samples_on_clusters),FUN = function(x){paste('X',x, sep = "")})
 
 
-meta_file[meta_file[,'Sample']== unlist(lapply(rownames(samples_on_clusters),FUN = function(x){paste('X',x, sep = "")}))]
-otu_file[paste(meta_file[meta_file[,'Timepoint']=='01','Sample'], '01', sep = ""),1:5]
-samples_on_clusters[substr(x = meta_file[meta_file[,'Timepoint']=='01','Sample'], start = 2,stop = 5),1]
+#meta_file[meta_file[,'Sample']== unlist(lapply(rownames(samples_on_clusters),FUN = function(x){paste('X',x, sep = "")}))]
+#otu_file[paste(meta_file[meta_file[,'Timepoint']=='01','Sample'], '01', sep = ""),1:5]
+#samples_on_clusters[substr(x = meta_file[meta_file[,'Timepoint']=='01','Sample'], start = 2,stop = 5),1]
 
-for (tt1 in names(timepoint_list)){
-  tt2= timepoint_list[[tt1]][,colSums(tt1)!=0]
-  tt = prcomp(x = tt2, scale. = T, center = T)
-  ttt = summary(tt)
-  plot(ttt$x[,1],ttt$x[,2],main = paste('Timepoint', tt1, sep = ' ') ,xlab = paste ((ttt$importance[2,1]*100),'%', sep = ' '), ylab = paste((ttt$importance[2,2]*100),'%',sep = ' '))
-}
-
+apply(samples_on_clusters, 2, FUN = function(x){max(x,na.rm = T)})
 ############## COMMENTS ############################
