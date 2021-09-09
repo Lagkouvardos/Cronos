@@ -6,12 +6,12 @@
 
 #' Please set the directory of the script as the working folder (e.g D:/studyname/Data/Chronos/)
 #' Note: the path is denoted by forward slash "/"
-setwd("~/Working_Chronos/")              #<--- CHANGE ACCORDINGLY !!!
+setwd("~/Working_Chronos/Chronos_almost")              #<--- CHANGE ACCORDINGLY !!!
 
 #' Please give the file name of the normalized OTU-table without taxonomic classification
 input_otu = "OTUs-TableIS.tab"           #<--- CHANGE ACCORDINGLY !!!
 #' Please give the name of the meta-file that contains individual sample information
-input_meta = "Meta_Inf_Stud.txt"                #<--- CHANGE ACCORDINGLY !!!
+input_meta = "Meta_Inf_Stud.tab"                #<--- CHANGE ACCORDINGLY !!!
 #' Please give the name of the phylogenetic tree constructed from the OTU sequences
 input_tree = "OTUs-NJTree.treIS"         #<--- CHANGE ACCORDINGLY !!!
 
@@ -28,16 +28,30 @@ adult_timepoint_name = 'MM'              #<--- CHANGE ACCORDINGLY
 # 4: Order
 # 5: Family
 
-taxonomic_level=3                          # <---- CHANGE ACCORDINGLY
+taxonomic_level='Family'                          # <---- CHANGE ACCORDINGLY
 
 
-# Please select method with which the optimal number of clusters will be selected
-# Could be either Drop or Highest
-clustering_method='Drop'                # <---- CHANGE ACCORDINGLy
+# Please select method for cluster representation. It can be either mean, or median.
+# Cluster representation via its mean calculates the mean abundancy of every taxon in the 
+# cluster and return the mean. It is preferable in larger datasets and creates a composition
+# not found in any of the samples on the cluster.
+# Cluster representation via its median calculates the median of the samples belonging to
+# the cluster. It is preferable in smaller datasets and returns a illustative composition
+# that belongs to a sample.
+representation_method = 'median'
 
-# Please select method to declare the transition matrix
-# It can be: mle (Maximum Likelihood Estimation), map (Maximum a posteriori) or  bootstrap
-markov_method= 'mle'
+# Please select clustering method. It could be one of hierarchical or 
+# PAM (Partition Around Medoids). If your dataset is small, we recommend hierarchical
+# else, we recommend PAM. PAM is also recommended for expected well-separated datasets
+clustering_method = 'Hierarchical'            # <---- CHANGE ACCORDINGLY
+
+
+# Please write the names of the 2 new directories, in which the output should be saved at:
+# Firstly, the one for the transition plots
+dir_with_plots= 'Calinski-Harabasz Plots'     # <---- CHANGE ACCORDINGLY
+# Secondly, the one with the files
+dir_with_files= 'Chronos_output_files' # <---- CHANGE ACCORDINGLY
+
 
 ######################### END OF SECTION #################################################
 
@@ -106,15 +120,14 @@ taxa_matrix <- data.frame(t(taxa_matrix))
 ##########################################################################################
 ################# CONVERT FILES TO DESIRABLE FORMAT ######################################
 ##########################################################################################
-kati <- c()
-kati_allo <-c()
+namesrow <- c()
+namesample <-c()
 for (i in rownames(meta_file)){
-  kati<- append(kati, paste(ifelse(nchar(i)==5,yes = 'X',no = 'X0'), i, sep = ""))
-  kati_allo <- append(kati_allo, paste(ifelse(nchar(meta_file[i,'Sample'])==2,yes = "X0",no = "X"),meta_file[i,'Sample'], sep = "")) 
+  namesrow <- append(namesrow, paste(ifelse(nchar(i)==5,yes = 'X',no = 'X0'), i, sep = ""))
+  namesample <- append(namesample, paste(ifelse(nchar(meta_file[i,'Sample'])==2,yes = "X0",no = "X"),meta_file[i,'Sample'], sep = "")) 
 }
-rownames(meta_file) <- kati
-meta_file[,'Sample'] <- kati_allo
-meta_file
+rownames(meta_file) <- namesrow
+meta_file[,'Sample'] <- namesample
 # keep only those rows that appear in the mapping file
 otu_file <- otu_file[,rownames(meta_file)]
 # OTU-table and mapping file should have the same order and number of sample names
@@ -131,7 +144,7 @@ meta_file <- meta_file[rownames(otu_file),]
 ############### CHECKING FOR AND INSTALLING PACKAGES  ####################################
 ##########################################################################################
 
-packages <-c("ade4","GUniFrac","phangorn","cluster","fpc","markovchain") 
+packages <-c("ade4","dplyr","GUniFrac","phangorn","cluster","fpc","markovchain", 'spgs') 
 # Function to check whether the package is installed
 InsPack <- function(pack)
 {
@@ -195,112 +208,57 @@ unifract_dist <- unifracs[, , "d_0.5"]
 ############# CLUSTERING #################################################################
 ##########################################################################################
 
-k=2
-kentra<- sample(x = row.names(unifract_dist), size = k)
-
-
-clustering_function <-function(unifract_dist,k,kentra){
-  
-  lis <- list()
-  distances <- function(unifract_dist,kentra,k) {
-    lista<- list()
-    egine_sosta<- T
-    apostaseis<- matrix(0,nrow = nrow(unifract_dist), ncol = k)
-    for (i in 1:nrow(unifract_dist)){
-      for (j in 1:k){
-        apostaseis[i,j]= unifract_dist[i,kentra[j]]
-      }
-      apostaseis[i,]=apostaseis[i,]==min(apostaseis[i,])
-    }
-    if (any(colSums(apostaseis)==1)){
-      egine_sosta<- F
-      kentra<- sample(x = row.names(unifract_dist), size = k)
-      return (distances(unifract_dist,kentra ,k))
-    }
-    
-    lista[[1]]<- apostaseis
-    lista[[2]]<- egine_sosta
-    return (lista)
-  }
-  
-  medoids<- function(unifract_dist,apostaseis,kentra,k){
-    for (i in 1:k){
-      kentra[i] <- row.names(unifract_dist[apostaseis[,i]==1,apostaseis[,i]==1])[which.min(apply(X = unifract_dist[apostaseis[,i]==1,apostaseis[,i]==1], FUN = mean,MARGIN=1))]
-      }
-    return (kentra)
-  }
-  
-  matequal <- function(x, y){
-    return (dim(x) == dim(y) && all(x == y))
-  }
-  
-  apostaseis <- matrix(1,nrow = nrow(unifract_dist), ncol = k)
-  palies_apostaseis <- matrix(0,nrow = nrow(unifract_dist), ncol = k)
-  palia_kentra<- c()
-  while (!(matequal(apostaseis,palies_apostaseis) && all(kentra==palia_kentra))) {
-    palia_kentra<- kentra
-    palies_apostaseis<- apostaseis
-    apotelesma<- distances(unifract_dist = unifract_dist, kentra = kentra,k = k)
-    apostaseis <- apotelesma[[1]]
-    egine_sosta <- apotelesma[[2]]
-    kentra<- medoids(unifract_dist = unifract_dist, apostaseis = apostaseis, kentra = kentra, k = k)
-  }
-  
-  lis[[1]]<- apply(apostaseis, FUN = which.max, MARGIN = 1)
-  lis[[2]]<- egine_sosta
-  
-  return (lis)
+PAM_clustering <- function(unifract_dist,k){
+  return (pam(x = unifract_dist, k = 4,diss = T)$clustering)
 }
 
+H_clustering <- function(unifract_dist,k){
+  return(cutree(hclust(d = as.dist(unifract_dist),method = 'ward.D2'),k=k))
+}
 
-
-optimal_k<- function(unifract_dist, method){
+optimal_k<- function(unifract_dist, clustering_method){
   calinski_harabasz_values <-c()
-  for (k in 2:8){
-    kentra<- sample(x = row.names(unifract_dist), size = k)
-    apotelesma <- clustering_function(unifract_dist = unifract_dist,k = k,kentra = kentra )
-    clustering <-apotelesma[[1]]
-    egine_sosta<- apotelesma[[2]]
-    calinski_harabasz_values= c(calinski_harabasz_values,(calinhara(x = unifract_dist,cn = k, clustering = clustering)))
-    if (egine_sosta == F){
-      break
+  if (clustering_method == 'Hierarchical'){
+    for (k in 2:9){
+      clustering <- H_clustering(unifract_dist = unifract_dist, k = k)
+      calinski_harabasz_values= c(calinski_harabasz_values,(calinhara(x = unifract_dist,cn = k, clustering = clustering)))
     }
   }
-  if (method=='Drop'){
-    kalitero<- which.min(diff(calinski_harabasz_values))+1
+  else if (clustering_method == 'PAM'){
+  for (k in 2:9){
+    clustering <- PAM_clustering(unifract_dist = unifract_dist, k = k)
+    calinski_harabasz_values= c(calinski_harabasz_values,(calinhara(x = unifract_dist,cn = k, clustering = clustering)))
+    }
   }
-  else if (method=='Highest'){
-    kalitero<- which.max(calinski_harabasz_values)
+  kaliterotero<- which.min(diff(calinski_harabasz_values))+1
+  highest <- which.max(calinski_harabasz_values)
+  kalitero <- calinski_harabasz_values[kaliterotero]- calinski_harabasz_values[highest] - min(diff(calinski_harabasz_values))
+  if (kalitero>0){
+    kalitero <- which.max(calinski_harabasz_values) +1
   }
+  else {
+    kalitero <- which.min(diff(calinski_harabasz_values))+1
+  }
+  dir.create(dir_with_plots, showWarnings = F)
+  jpeg(filename =paste(dir_with_plots, paste(paste('Calinski-Harabasz_index',name,sep = ' of Timepoint '),'jpeg',sep = ' .'),sep = '/'))
+  plot(calinski_harabasz_values,x = 2:9)
+  dev.off()
   return (kalitero)
 }
 
-k=optimal_k(unifract_dist = unifract_dist, method = clustering_method)
-clusters <- clustering_function(unifract_dist = unifract_dist,k = k, kentra = sample(x = row.names(unifract_dist), size = k))[[1]]
+k=optimal_k(unifract_dist = unifract_dist,clustering_method = clustering_method)
 
+
+if (clustering_method == 'Hierarchical'){
+  clusters <- H_clustering(unifract_dist = unifract_dist, k = k )
+}
+else if (clustering_method == 'PAM'){
+  clusters <- PAM_clustering(unifract_dist = unifract_dist ,k =k)
+}
 samples_on_clusters[meta_file[row.names(unifract_dist),'Sample'],name]<- clusters
+samples_on_clusters[samples_on_clusters==0] <- NA
 }
 
-######################### END OF SECTION #################################################
-
-##########################################################################################
-######################## DECLARE TRANSITION MATRIX  ######################################
-##########################################################################################
-
-# Exclude the infants of the dataset
-infants<- samples_on_clusters[samples_on_clusters[,adult_timepoint_name]==0,1:ncol(samples_on_clusters)-1]
-
-# Create the markovian transition matrix for each combination of timepoints and save them
-
-transition_matrices <- list()
-for (i in colnames(infants)){
-  for (j in colnames(infants)){
-    if (as.numeric(i) < as.numeric(j)){
-      markovestimation <- markovchainFit(as.character(infants[,c(i,j)]), method = markov_method, byrow = T)
-      transition_matrices[[paste(i,j,sep = '_')]] <- t(markovestimation$estimate)
-    }
-  }
-}
 ######################### END OF SECTION #################################################
 
 ##########################################################################################
@@ -311,8 +269,8 @@ for (i in colnames(infants)){
 taxa_per_cluster <- function(taxa_matrix,samples_on_clusters,timepoint_list){
   taxa_clusters <- list()
   for (i in names(timepoint_list)){
-    for (j in 1:max(samples_on_clusters[,i])){
-      taxa_clusters[[paste(as.character(i),as.character(j),sep = 'c')]] <- as.matrix(x = apply(X = taxa_matrix[paste(rownames(samples_on_clusters[samples_on_clusters[,i]==j,]),i,sep = ''),], MARGIN = 2, FUN = mean),decreasing = T)      
+    for (j in 1:max(samples_on_clusters[,i],na.rm = T)){
+      taxa_clusters[[paste(as.character(i),as.character(j),sep = ' cluster ')]] <- as.matrix(x = apply(X = taxa_matrix[paste(rownames(samples_on_clusters[samples_on_clusters[,i]==j,]),i,sep = ''),], MARGIN = 2, FUN = representation_method),decreasing = T)      
       }
   }
   clustering_taxa <- matrix(0,  nrow = ncol(taxa_matrix), ncol = length(taxa_clusters))
@@ -327,37 +285,113 @@ taxa_per_cluster <- function(taxa_matrix,samples_on_clusters,timepoint_list){
 }
 
 
-clustering_taxa <- taxa_per_cluster(taxa_matrix = taxa_matrix, samples_on_clusters = samples_on_clusters, timepoint_list = timepoint_list)
+taxa_clusters <- taxa_per_cluster(taxa_matrix = taxa_matrix, samples_on_clusters = samples_on_clusters, timepoint_list = timepoint_list)
 
 ######################### END OF SECTION #################################################
 
 ##########################################################################################
-################ PLOT TRANSITION PROBABILITIES ON DIRECTORY  #############################
+################ WRITE TAB DELIMITED FILES WITH THE OUTPUTS  #############################
 ##########################################################################################
 
-dir.create('Transition_Plots')
 
-for (name in names(transition_matrices)){
-  jpeg(filename =paste('Transition_Plots', paste(paste(unlist(strsplit(name,split = '_'))[1],unlist(strsplit(name,split = '_'))[2], sep = ' to '), 'timepoints', sep = ' '),sep = '/'))
-  plot(transition_matrices[[name]], name = name)
-  dev.off()
-  
+dir.create(dir_with_files, showWarnings = F)
+
+
+colnames(taxa_clusters)<-lapply(X = colnames(taxa_clusters), FUN = function(x){paste('Timepoint',x,sep = ' ')})
+row.names(samples_on_clusters) <- lapply(X = rownames(samples_on_clusters), FUN = function(x){substr(x,start=2,stop= 4)})
+
+write.csv(x = samples_on_clusters, file = paste(dir_with_files, "Samples_in_Timepoint-specific_Clusters.csv",sep = '/'), row.names = T)
+write.csv(x = taxa_clusters,       file = paste(dir_with_files, "Taxonomic_profile_of_clusters.csv", sep = '/'), row.names = T)
+
+######################### END OF SECTION #################################################
+
+################### MARKOVIAN CHAIN CHECK ################################################
+state_calculator = function(infants,t0,t2){
+  states <- c()
+  for (j in 1:nrow(unique(infants[,t0:t2]))){
+    if (!any(is.na(unique(infants[,t0:t2])[j,]))){
+    states[[j]] <- as.vector (unique(infants[,t0:t2])[j,])
+    }
+  }
+  return (states)
+}  
+
+counting_states = function (infants,t0,t2,states) {
+  counter <- c(rep(0,length(states)))
+  for (i in 1:nrow(infants)){
+    if (!any(is.na(unique(infants[i,t0:t2])))){
+      for (j in 1:length(states)){
+        if (all(infants[i,t0:t2]==states[[j]])){
+          counter[j]= counter[j]+1
+          } 
+      }
+    }
+  }
+  return (counter)
 }
 
-######################### END OF SECTION #################################################
+Ss <- c()
+dof <- c()
+for (t0 in 1:(ncol(infants)-2)){
+  t1 <- t0+1
+  t2 <- t0+2
+  ijk_states <- state_calculator(infants = infants, t0 = t0 , t2 = t2 )
+  ijk_counter <- counting_states(infants = infants ,t0 = t0, t2 = t2, states = ijk_states)
+  
+  jk_states <-lapply(ijk_states, function(x){x[2:3]})
+  jk_counter <- counting_states(infants = infants ,t0 = t1,t2 = t2, states = jk_states)
+  ij_states <- lapply(ijk_states, function(x){x[1:2]})
+  
+  p_jk <- jk_counter/sum(jk_counter)
+  S =0
+  for (i in 1:length(jk_counter)){
+      S = S + (ijk_counter[i]-jk_counter[i]*p_jk[[i]])**2/jk_counter[i]*p_jk[[i]]
+  }
+  degrees_of_freedom = length(unique(infants[,t0])) - length(unique(ij_states)) + length(unique(ijk_states)) +1  
+  Ss[t0] <- S
+  dof [t0] <- degrees_of_freedom
+}
+Markovian_Property_Per_Timepoints <-c()
+for (i in 1: length(dof)){
+  Markovian_Property_Per_Timepoints[i] = Ss[i] < qchisq(.95,df = dof[i])
+}
+Markovian_Property = all(Markovian_Property_Per_Timepoints)
+Markovian_Property
+
+################### MARKOVIAN CHAIN CHECK 2 ##############################################
+infants<- samples_on_clusters[is.na(samples_on_clusters[,adult_timepoint_name]),1:ncol(samples_on_clusters)-1]
+
+independed_clusters <- cumsum(as.vector(apply(X = infants,MARGIN = 2,FUN = function(x){max(x,na.rm = T)})))
+for (i in 2:ncol(infants)){
+  for (j in 1:max(infants[,i],na.rm = T)){
+     infants[infants[,i]==j,i] <- independed_clusters[i-1]+j
+  }
+}
+apply(samples_on_clusters[is.na(samples_on_clusters[,adult_timepoint_name]),1:ncol(samples_on_clusters)-1], 2, function(x){max(x,na.rm = T)})
+apply(infants,MARGIN = 2,FUN = function(x){max(x,na.rm = T)})
+
+testaki <- markov.test(infants)
+testaki$statistics["X-squared"]
+
+
+
 
 ############## PRACTICE ############################
 
-install.packages('dplyr', dependencies = T)
-library(dplyr)
 
-ps <- c()
-for (i in 1:nrow(infants)) {
-  ps[i] <- verifyMarkovProperty(infants[i,])$p.value
+
+lapply(rownames(samples_on_clusters),FUN = function(x){paste('X',x, sep = "")})
+
+
+meta_file[meta_file[,'Sample']== unlist(lapply(rownames(samples_on_clusters),FUN = function(x){paste('X',x, sep = "")}))]
+otu_file[paste(meta_file[meta_file[,'Timepoint']=='01','Sample'], '01', sep = ""),1:5]
+samples_on_clusters[substr(x = meta_file[meta_file[,'Timepoint']=='01','Sample'], start = 2,stop = 5),1]
+
+for (tt1 in names(timepoint_list)){
+  tt2= timepoint_list[[tt1]][,colSums(tt1)!=0]
+  tt = prcomp(x = tt2, scale. = T, center = T)
+  ttt = summary(tt)
+  plot(ttt$x[,1],ttt$x[,2],main = paste('Timepoint', tt1, sep = ' ') ,xlab = paste ((ttt$importance[2,1]*100),'%', sep = ' '), ylab = paste((ttt$importance[2,2]*100),'%',sep = ' '))
 }
-ps
-
 
 ############## COMMENTS ############################
-# Καταλήγω με πίνακα που θα έχει τα διαφορετικά clusters ανά δείγμα και ως features ????
-# 27 δείγματα είναι πολύ λίγα για random forest, ειδικά χωρίς features.
