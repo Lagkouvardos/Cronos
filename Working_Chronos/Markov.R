@@ -107,6 +107,7 @@ transition_matrix
 
 
 ############## PRACTICE ############################
-rowSums(transition_matrix)
-infants_on_clusters
+
+
+
 ############## COMMENTS ############################
