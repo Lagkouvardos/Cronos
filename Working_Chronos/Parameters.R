@@ -9,11 +9,11 @@
 setwd("~/Working_Chronos/Chronos_almost")              #<--- CHANGE ACCORDINGLY !!!
 
 #' Please give the file name of the normalized OTU-table without taxonomic classification
-input_otu = "OTUs-TableIS.tab"           #<--- CHANGE ACCORDINGLY !!!
+input_otu = "SOTUs-Table.tab"           #<--- CHANGE ACCORDINGLY !!!
 #' Please give the name of the meta-file that contains individual sample information
-input_meta = "Meta_Inf_Stud.tab"                #<--- CHANGE ACCORDINGLY !!!
+input_meta = "Mapping_File_Inf_St.csv"                #<--- CHANGE ACCORDINGLY !!!
 #' Please give the name of the phylogenetic tree constructed from the OTU sequences
-input_tree = "OTUs-NJTree.treIS"         #<--- CHANGE ACCORDINGLY !!!
+input_tree = "SOTUs-NJTree.tre"         #<--- CHANGE ACCORDINGLY !!!
 
 # Please specify if the file contains both adult and infant data: 
 # If it contains adult data specify the name of the column (i.e. timepoint name) where they are saved
@@ -28,7 +28,7 @@ adult_timepoint_name = 'MM'              #<--- CHANGE ACCORDINGLY
 # 4: Order
 # 5: Family
 
-taxonomic_level='Order'                          # <---- CHANGE ACCORDINGLY
+taxonomic_level='Family'                          # <---- CHANGE ACCORDINGLY
 
 
 # Please select method for cluster representation. It can be either mean, or median.
@@ -51,3 +51,4 @@ clustering_method = 'Hierarchical'            # <---- CHANGE ACCORDINGLY
 dir_with_plots= 'Plots'     # <---- CHANGE ACCORDINGLY
 # Secondly, the one with the files
 dir_with_files= 'Chronos_output_files' # <---- CHANGE ACCORDINGLY
+

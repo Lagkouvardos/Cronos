@@ -1,8 +1,11 @@
 #################### NO CHANGE IS NEEDED HERE ############################################
 
 #### You can select everything (Ctrl+A) and press run (Ctrl+Enter)  
+setwd("~/Working_Chronos/Chronos_almost")              #<--- CHANGE ACCORDINGLY !!!
+
 
 source('Parameters.R')
+
 ##########################################################################################
 ############################ READING THE FILES ###########################################
 ##########################################################################################
@@ -13,7 +16,7 @@ meta_file <- data.frame(meta_file[!apply(is.na(meta_file) | meta_file=="",1,all)
 # Order the mapping file by sample names (ascending)
 meta_file <- data.frame(meta_file[order(row.names(meta_file)),])
 # Load the tab-delimited file containing the values to be analyzed (samples names in the first column)
-otu_file <- read.csv(file = input_otu,sep = '\t',row.names = 1,header = T, stringsAsFactors = F)
+otu_file <- read.csv(file = input_otu,sep = '\t',row.names = 1,header = T, stringsAsFactors = F, check.names = F)
 # Clean table from empty lines
 otu_file <- otu_file[!apply(is.na(otu_file) | otu_file =="",1,all),]
 
@@ -63,14 +66,7 @@ taxa_matrix <- data.frame(t(taxa_matrix))
 ##########################################################################################
 ################# CONVERT FILES TO DESIRABLE FORMAT ######################################
 ##########################################################################################
-namesrow <- c()
-namesample <-c()
-for (i in rownames(meta_file)){
-  namesrow <- append(namesrow, paste(ifelse(nchar(i)==5,yes = 'X',no = 'X0'), i, sep = ""))
-  namesample <- append(namesample, paste(ifelse(nchar(meta_file[i,'Sample'])==2,yes = "X0",no = "X"),meta_file[i,'Sample'], sep = "")) 
-}
-rownames(meta_file) <- namesrow
-meta_file[,'Sample'] <- namesample
+
 # keep only those rows that appear in the mapping file
 otu_file <- otu_file[,rownames(meta_file)]
 # OTU-table and mapping file should have the same order and number of sample names
@@ -87,7 +83,7 @@ meta_file <- meta_file[rownames(otu_file),]
 ############### CHECKING FOR AND INSTALLING PACKAGES  ####################################
 ##########################################################################################
 
-packages <-c("ade4","dplyr","GUniFrac","phangorn","cluster","fpc","markovchain", 'spgs') 
+packages <-c("ade4","dplyr","GUniFrac","phangorn","cluster","fpc","markovchain", 'spgs','caret') 
 # Function to check whether the package is installed
 InsPack <- function(pack)
 {
@@ -138,6 +134,7 @@ colnames(samples_on_clusters)<- names(timepoint_list)
 ################ CLUSTERING SAMPLES ON TIMEPOINTS ########################################
 ##########################################################################################
 # Calculate the UniFrac distance matrix for comparing microbial communities
+
 for (name in names(timepoint_list)){
   
   unifracs <- GUniFrac(otu.tab = timepoint_list[[name]] ,tree = rooted_tree, alpha = c(0.0,0.5,1.0))$unifracs
@@ -202,53 +199,3 @@ for (name in names(timepoint_list)){
 }
 
 ######################### END OF SECTION #################################################
-
-##########################################################################################
-######################## SPECIFY TAXA ON CLUSTERS   ######################################
-##########################################################################################
-
-
-taxa_per_cluster <- function(taxa_matrix,samples_on_clusters,timepoint_list, representation_method){
-  taxa_clusters <- list()
-  for (i in names(timepoint_list)){
-    for (j in min(samples_on_clusters[,i], na.rm = T):max(samples_on_clusters[,i],na.rm = T)){
-      if (representation_method == 'median'){
-        taxa_clusters[[paste(i,as.character(j),sep = ' cluster ')]] = as.matrix(apply(X = taxa_matrix[paste(rownames(samples_on_clusters[samples_on_clusters[,i]==j,])[!is.na(rownames(samples_on_clusters[samples_on_clusters[,i]==j,]))],i,sep = ""),],MARGIN = 2,FUN = median))
-      }
-      else if (representation_method == 'mean'){
-        taxa_clusters[[paste(i,as.character(j),sep = ' cluster ')]] = as.matrix(apply(X = taxa_matrix[paste(rownames(samples_on_clusters[samples_on_clusters[,i]==j,])[!is.na(rownames(samples_on_clusters[samples_on_clusters[,i]==j,]))],i,sep = ""),],MARGIN = 2,FUN = mean))
-      }
-    }
-  }
-  
-  clustering_taxa <- matrix(0,  nrow = ncol(taxa_matrix), ncol = length(taxa_clusters))
-  row.names(clustering_taxa)<- colnames(taxa_matrix)
-  colnames(clustering_taxa)<- names(taxa_clusters)
-  for (i in colnames(clustering_taxa)){
-    for (j in rownames(clustering_taxa)){
-      clustering_taxa[j,i] <- taxa_clusters[[i]][j,]
-    }
-  }
-  return (clustering_taxa)
-}
-
-taxa_clusters <- taxa_per_cluster(taxa_matrix = taxa_matrix, samples_on_clusters = samples_on_clusters, timepoint_list = timepoint_list, representation_method = representation_method)
-
-######################### END OF SECTION #################################################
-
-##########################################################################################
-################ WRITE TAB DELIMITED FILES WITH THE OUTPUTS  #############################
-##########################################################################################
-
-
-dir.create(dir_with_files, showWarnings = F)
-
-
-colnames(taxa_clusters)<-lapply(X = colnames(taxa_clusters), FUN = function(x){paste('Timepoint',x,sep = ' ')})
-row.names(samples_on_clusters) <- lapply(X = rownames(samples_on_clusters), FUN = function(x){substr(x,start=2,stop= 4)})
-
-write.csv(x = samples_on_clusters, file = paste(dir_with_files, "Samples_in_Timepoint-specific_Clusters.csv",sep = '/'), row.names = T)
-write.csv(x = taxa_clusters,       file = paste(dir_with_files, "Taxonomic_profile_of_clusters.csv", sep = '/'), row.names = T)
-
-######################### END OF SECTION #################################################
-
