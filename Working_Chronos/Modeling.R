@@ -174,7 +174,9 @@ print (paste('Train set LOO mean accuracy',round(mean(acctrain),2), sep = ' = ')
 
 xrwma <- c('paleturquoise4','paleturquoise3', 'mediumturquoise', 'darkturquoise')
 for (i in 1:(ncol(infants)-1)){
+  jpeg(filename =paste(dir_with_plots, paste(paste('Multinomial Logistic Regression Accuracies',colnames(infants[i]),sep = ' of Timepoint '),'jpeg',sep = ' .'),sep = '/'))
   barplot(cbind(acctest,accteststr, acctrain, acctrainstr)[i,] , name = c('Test LOO','Test Splits', 'Train LOO','Train Split') ,col= xrwma, main =paste('Mean Accuracy on Timepoint',rev(colnames(infants)[2:ncol(infants)])[i], sep = ' ') ,ylim = c(0,100) )
+  dev.off()
 }
 
 proc.time() - ptm

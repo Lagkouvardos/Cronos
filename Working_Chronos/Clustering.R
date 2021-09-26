@@ -11,7 +11,7 @@ dir.create(dir_with_plots, showWarnings = F)
 ############################ READING THE FILES ###########################################
 ##########################################################################################
 
-meta_file <- read.table (file = input_meta, check.names = FALSE, header = TRUE, dec = ".", sep = "\t", row.names = 1, comment.char = "", stringsAsFactors = F)
+meta_file <- read.table (file = input_meta, check.names = FALSE, header = TRUE, dec = ".", sep = ",", row.names = 1, comment.char = "", stringsAsFactors = F)
 # Clean table from empty lines
 meta_file <- data.frame(meta_file[!apply(is.na(meta_file) | meta_file=="",1,all),])
 # Order the mapping file by sample names (ascending)
@@ -137,7 +137,6 @@ colnames(samples_on_clusters)<- names(timepoint_list)
 # Calculate the UniFrac distance matrix for comparing microbial communities
 
 for (name in names(timepoint_list)){
-  
   unifracs <- GUniFrac(otu.tab = timepoint_list[[name]] ,tree = rooted_tree, alpha = c(0.0,0.5,1.0))$unifracs
   
   # Weight on abundant lineages so the distance is not dominated by highly abundant lineages with 0.5 having the best power
@@ -232,3 +231,4 @@ for (name in names(timepoint_list)){
   
 }
 ######################### END OF SECTION #################################################
+

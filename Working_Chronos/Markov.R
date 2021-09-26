@@ -33,31 +33,24 @@ counting_states = function (infants,t0,t2,states) {
   return (counter)
 }
 
+tps = as.character(sort(as.numeric(colnames(samples_on_clusters)[colnames(samples_on_clusters)!='ot' & colnames(samples_on_clusters)!='MM']),decreasing = F))
+infants = samples_on_clusters[,tps]
+infants = infants[!apply(infants,1,function(x){all(is.na(x))}),]
 
-infants<- samples_on_clusters[is.na(samples_on_clusters[,adult_timepoint_name]),1:ncol(samples_on_clusters)-1]
-kati_allo <- matrix (NA, nrow = nrow(infants), ncol = 5)
-colnames(kati_allo) = sort(as.numeric(colnames(infants)[colnames(infants)!='ot']))
-rownames(kati_allo) = rownames(infants)
-kati_allo
-colnames(infants)
-colnames(kati_allo)
-for (row in rownames(infants)){
-  kati_allo[row,1:2] = infants[row,1:2]
-  kati_allo[row,3] = infants[row,6]
-  kati_allo[row,4] = infants[row,3]
-  kati_allo[row,5]= infants[row,4]
-}
-kati_allo
+#infants<- samples_on_clusters[is.na(samples_on_clusters[,adult_timepoint_name]),1:ncol(samples_on_clusters)-1]
 
-infants_on_clusters <- samples_on_clusters[is.na(samples_on_clusters[,adult_timepoint_name]),1:ncol(samples_on_clusters)-1]
+infants_on_clusters <- infants
+
+
 independed_clusters <- cumsum(as.vector(apply(X = infants,MARGIN = 2,FUN = function(x){max(x,na.rm = T)})))
-for (i in 2:ncol(kati_allo)){
-  for (j in 1:max(kati_allo[,i],na.rm = T)){
-    kati_allo[kati_allo[,i]==j,i] <- independed_clusters[i-1]+j
+
+for (i in 2:ncol(infants_on_clusters)){
+  for (j in 1:max(infants_on_clusters[,i],na.rm = T)){
+    infants_on_clusters[infants_on_clusters[,i]==j,i] <- independed_clusters[i-1]+j
   }
 }
+infants_on_clusters
 
-kati_allo
 Markov_Test_X2 <- function(infants){
   Ss <- c()
   dof <- c()
@@ -95,7 +88,6 @@ Markov_Test_X2 <- function(infants){
 
 Markovian_Property <- Markov_Test_X2(infants = infants)
 
-Markovian_Property_renamed <-Markov_Test_X2(infants = infants_on_clusters)
 
 
 ######################### END OF SECTION #################################################
@@ -104,13 +96,13 @@ Markovian_Property_renamed <-Markov_Test_X2(infants = infants_on_clusters)
 ####################### CLAIM TRANSITION MATRIX ##########################################
 ##########################################################################################
 
-matrix_of_transitions <- matrix(0, nrow = max(kati_allo, na.rm = T), ncol = max(kati_allo,na.rm = T))
+matrix_of_transitions <- matrix(0, nrow = max(infants_on_clusters, na.rm = T), ncol = max(infants_on_clusters,na.rm = T))
 
-for (i in 1:(ncol(kati_allo)-1)){
-  for (j in min(kati_allo[,i],na.rm = T):max(kati_allo[,i],na.rm = T)){
-    for (k in min(kati_allo[,i+1],na.rm = T):max(kati_allo[,i+1],na.rm = T)){
+for (i in 1:(ncol(infants_on_clusters)-1)){
+  for (j in min(infants_on_clusters[,i],na.rm = T):max(infants_on_clusters[,i],na.rm = T)){
+    for (k in min(infants_on_clusters[,i+1],na.rm = T):max(infants_on_clusters[,i+1],na.rm = T)){
   
-        matrix_of_transitions[j,k] = sum(kati_allo[kati_allo[,i]==j,(i+1)]==k,na.rm = T)/length(kati_allo[kati_allo[,i]==j,(i+1)])
+        matrix_of_transitions[j,k] = sum(infants_on_clusters[infants_on_clusters[,i]==j,(i+1)]==k,na.rm = T)/length(infants_on_clusters[infants_on_clusters[,i]==j,(i+1)])
       }
     }
   }

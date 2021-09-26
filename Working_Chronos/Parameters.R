@@ -51,4 +51,3 @@ clustering_method = 'Hierarchical'            # <---- CHANGE ACCORDINGLY
 dir_with_plots= 'Plots'     # <---- CHANGE ACCORDINGLY
 # Secondly, the one with the files
 dir_with_files= 'Chronos_output_files' # <---- CHANGE ACCORDINGLY
-
