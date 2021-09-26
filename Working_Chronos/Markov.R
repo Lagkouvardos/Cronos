@@ -104,18 +104,18 @@ Markovian_Property_renamed <-Markov_Test_X2(infants = infants_on_clusters)
 ####################### CLAIM TRANSITION MATRIX ##########################################
 ##########################################################################################
 
-transition_matrix <- matrix(0, nrow = max(kati_allo, na.rm = T), ncol = max(kati_allo,na.rm = T))
+matrix_of_transitions <- matrix(0, nrow = max(kati_allo, na.rm = T), ncol = max(kati_allo,na.rm = T))
 
 for (i in 1:(ncol(kati_allo)-1)){
   for (j in min(kati_allo[,i],na.rm = T):max(kati_allo[,i],na.rm = T)){
     for (k in min(kati_allo[,i+1],na.rm = T):max(kati_allo[,i+1],na.rm = T)){
   
-        transition_matrix[j,k] = sum(kati_allo[kati_allo[,i]==j,(i+1)]==k,na.rm = T)/length(kati_allo[kati_allo[,i]==j,(i+1)])
+        matrix_of_transitions[j,k] = sum(kati_allo[kati_allo[,i]==j,(i+1)]==k,na.rm = T)/length(kati_allo[kati_allo[,i]==j,(i+1)])
       }
     }
   }
 
-#transition_matrix
+#matrix_of_transitions
 
 
 ##########################################################################################

@@ -5,6 +5,7 @@ setwd("~/Working_Chronos/Chronos_almost")              #<--- CHANGE ACCORDINGLY 
 
 
 source('Parameters.R')
+dir.create(dir_with_plots, showWarnings = F)
 
 ##########################################################################################
 ############################ READING THE FILES ###########################################
@@ -147,23 +148,30 @@ for (name in names(timepoint_list)){
   }
   
   H_clustering <- function(unifract_dist,k){
-    return(cutree(hclust(d = as.dist(unifract_dist),method = 'ward.D2'),k=k))
+    clusters = hclust(d = as.dist(unifract_dist),method = 'ward.D2')
+    return(cutree(clusters,k=k))
   }
   
   optimal_k<- function(unifract_dist, clustering_method){
-    calinski_harabasz_values <-c()
+    calinski_harabasz_valuesH <-c()
+    calinski_harabasz_valuesP <-c()
+    for (k in 2:9){
+      clusteringH <- H_clustering(unifract_dist = unifract_dist, k = k)
+      calinski_harabasz_valuesH= c(calinski_harabasz_valuesH,(calinhara(x = unifract_dist,cn = k, clustering = clusteringH)))
+    }
+  
+    for (k in 2:9){
+      clusteringP <- PAM_clustering(unifract_dist = unifract_dist, k = k)
+      calinski_harabasz_valuesP= c(calinski_harabasz_valuesP,(calinhara(x = unifract_dist,cn = k, clustering = clusteringP)))
+    }
+    
     if (clustering_method == 'Hierarchical'){
-      for (k in 2:9){
-        clustering <- H_clustering(unifract_dist = unifract_dist, k = k)
-        calinski_harabasz_values= c(calinski_harabasz_values,(calinhara(x = unifract_dist,cn = k, clustering = clustering)))
-      }
+      calinski_harabasz_values = calinski_harabasz_valuesH
     }
-    else if (clustering_method == 'PAM'){
-      for (k in 2:9){
-        clustering <- PAM_clustering(unifract_dist = unifract_dist, k = k)
-        calinski_harabasz_values= c(calinski_harabasz_values,(calinhara(x = unifract_dist,cn = k, clustering = clustering)))
-      }
+    else if (clustering_method== 'PAM'){
+      calinski_harabasz_values = calinski_harabasz_valuesP
     }
+    
     kaliterotero<- which.min(diff(calinski_harabasz_values))+1
     highest <- which.max(calinski_harabasz_values)
     kalitero <- calinski_harabasz_values[kaliterotero]- calinski_harabasz_values[highest] - min(diff(calinski_harabasz_values))
@@ -173,18 +181,42 @@ for (name in names(timepoint_list)){
     else {
       kalitero <- which.min(diff(calinski_harabasz_values))+1
     }
-    dir.create(dir_with_plots, showWarnings = F)
-    jpeg(filename =paste(dir_with_plots, paste(paste('Calinski-Harabasz_index',name,sep = ' of Timepoint '),'jpeg',sep = ' .'),sep = '/'))
-    plot(calinski_harabasz_values,x = 2:9)
-    dev.off()
-    return (kalitero)
+    
+    return (list(kalitero, calinski_harabasz_valuesP, calinski_harabasz_valuesH))
   }
   
-  k=optimal_k(unifract_dist = unifract_dist,clustering_method = clustering_method)
+  optimal_k_results = optimal_k(unifract_dist = unifract_dist,clustering_method = clustering_method)
+  
+  k = optimal_k_results[[1]]
+  
+  calinski_harabasz_valuesP = optimal_k_results[[2]]
+  calinski_harabasz_valuesH = optimal_k_results[[3]]
+  
+  if (max(calinski_harabasz_valuesH)>max(calinski_harabasz_valuesP)){
+    jpeg(filename =paste(dir_with_plots, paste(paste('Calinski-Harabasz_index',name,sep = ' of Timepoint '),'jpeg',sep = ' .'),sep = '/'))
+    plot (calinski_harabasz_valuesH,type = 'l', x = 2:9, col='blue',main = 'Calinski-Harabasz scores of different #Clusters')
+    lines(calinski_harabasz_valuesP, x = 2:9, col= 'brown')
+    legend("topleft", c("Hierarchical","PAM"), fill=c("blue","brown"))
+    dev.off()
+    
+  }
+  else {
+    jpeg(filename =paste(dir_with_plots, paste(paste('Calinski-Harabasz_index',name,sep = ' of Timepoint '),'jpeg',sep = ' .'),sep = '/'))
+    plot (calinski_harabasz_valuesP,type = 'l' ,x = 2:9, col='blue',main = 'Calinski-Harabasz scores of different #Clusters' , ylim=(c(0,max(calinski_harabasz_valuesP) + max(calinski_harabasz_valuesP)*0.2)))
+    lines(calinski_harabasz_valuesH, x = 2:9, col= 'brown')
+    legend("topleft", c("PAM","Hierarchical"), fill=c("blue","brown"))
+    dev.off()
+    
+  }
   
   
   if (clustering_method == 'Hierarchical'){
-    clusters <- H_clustering(unifract_dist = unifract_dist, k = k )
+    clusters <- hclust(d = as.dist(unifract_dist),method = 'ward.D2')
+    jpeg(filename = paste(dir_with_plots,paste('Hierarchical Clustering of',paste('Timepoint',name,sep=' '),sep = ' '),sep = '/'))
+    plot (clusters)
+    clusters = cutree(clusters,k = k)
+    dev.off()
+
   }
   else if (clustering_method == 'PAM'){
     clusters <- PAM_clustering(unifract_dist = unifract_dist ,k =k)
@@ -196,6 +228,7 @@ for (name in names(timepoint_list)){
   jpeg(filename = paste(dir_with_plots,paste('MDS Plot of',paste('Timepoint',name,sep=' '),sep = ' '),sep = '/'))
   plot(scall , main = name)
   dev.off()
+  
+  
 }
-
 ######################### END OF SECTION #################################################
