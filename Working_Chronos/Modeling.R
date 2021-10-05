@@ -1,42 +1,274 @@
 setwd('Working_Chronos/Chronos_almost/')
 
-source('Markov.R')
-library (nnet)
-
 ptm <- proc.time()
+source('Markov.R')
+
+# Initializing lists to write accuracies of models
+trainLOO <- c()
+testLOO  <- c()
+trainStr <- c()
+testStr  <- c()
+
+# Naming the effectors to be imputed on the model
+effectors = colnames(meta_file)[3:ncol(meta_file)]
+
+
+# Loop to create a model for each timepoint on the dataset
+for (end_timepoint in head(as.numeric(rev(colnames(infants))),n = (ncol(infants))-1)){
+
+# Loop to select the number of features to include in the final model
+for (Ncomb in 1: (ncol(meta_file)-3)){
+# Create a vector of all possible feature combinations
+  effector_combinations = combinations(v = effectors,r = Ncomb, repeats.allowed = F, n = length(effectors))
+# Loop to select all possible combinations of features from the dataset  
+  for (combination in 1:nrow(effector_combinations)){
+# Select the table with the corresponding features on the corresponding timepoint
+    files = meta_file[,c('Sample','Timepoint',effector_combinations[combination,])]
+
+# Setting the timepoints from which the different models derive  
+timepoints_to_perform = rev(colnames(infants)[as.numeric(colnames(infants)) < end_timepoint])
 
 ###############################################################################################################
-############################ LEAVE ONE OUT ####################################################################
+############################ LEAVE ONE OUT ONE ################################################################
 ###############################################################################################################
 
 # Calculate mean accuracy of prediction on final timepoint, via Leave One Out method of splitting Train-Test sets
-LOO_multilogreg <- function (infants,timepoint){
-
+LOO_multilogreg_One <- function (infants,timepoint,end_timepoint,meta_file,Ncomb){
+  
   logreg <- as.data.frame(matrix(NA,nrow = nrow(infants),ncol = ncol(meta_file)))
-  colnames(logreg)= c(paste('Cluster_at',tail(colnames(infants),1),sep = '_'), timepoint , colnames(meta_file)[3:ncol(meta_file)])
+  colnames(logreg)= c(paste('Cluster_at',end_timepoint,sep = '_'), timepoint , colnames(meta_file)[3:ncol(meta_file)])
   rownames(logreg)= rownames(infants)
   
   for (deigma in (rownames(infants))){
-    subTab = meta_file[meta_file[,1] %in% deigma & meta_file[,2] == 12, 3:ncol(meta_file)]
-    if (nrow(subTab) == 1){
-      logreg[deigma, colnames(meta_file)[3:ncol(meta_file)]] = subTab[1,]
+    subTab = meta_file[meta_file[,1] %in% deigma & meta_file[,2] == as.numeric(timepoint), 3:ncol(meta_file)]
+    if (Ncomb > 1 ){
+      if(nrow(subTab) == 1){
+      logreg[deigma, colnames(meta_file)[3:ncol(meta_file)]] = subTab
+      }
     }
-    logreg[deigma, 2] = ifelse(test = length(infants[deigma,tail(colnames(infants),2)[1]]), yes = infants[deigma,timepoint], no = NA)
-    logreg[deigma, 1] = ifelse(test = length(infants[deigma,tail(colnames(infants),1)]), yes = infants[deigma,tail(colnames(infants),1)], no = NA)
+    else if (Ncomb == 1){
+      if (length(subTab) == 1){
+        logreg[deigma, colnames(meta_file)[3:ncol(meta_file)]] = subTab
+      }
+    }
+    logreg[deigma, 2] = ifelse(test = length(infants[deigma,timepoint]), yes = infants[deigma,timepoint], no = NA)
+    logreg[deigma, 1] = ifelse(test = length(infants[deigma,as.character(end_timepoint)]), yes = infants[deigma,as.character(end_timepoint)], no = NA)
   }
   
   logreg = logreg[complete.cases(logreg),]
   
   acc <- c()
   tra <- c()
+  form = as.formula(paste(paste('Cluster_at',end_timepoint,sep = '_'),'~.',sep = ''))
   for (j in 1:nrow(logreg)){
     trainset = logreg[1:nrow(logreg)!=j,]
     testset = logreg[j,]
     
-    apotelesmata <- multinom(formula = Cluster_at_24~. , data = trainset ,censored = T, model = T)
+    apotelesmata <- multinom(formula = form , data = trainset ,censored = T, model = T)
     
     giatotrain <- apotelesmata %>% predict(trainset[,2:ncol(trainset)])
     provlepseis <- apotelesmata %>% predict(testset[,2:ncol(testset)])
+    acc[j] = (sum(provlepseis == testset[,1])/ nrow(testset)) *100
+    tra[j] = (sum(provlepseis == trainset[,1])/nrow(trainset))*100
+    
+  }
+  
+  return (c(mean(tra),mean(acc)))
+}
+
+
+###############################################################################################################
+############################ Stratified Train/Test splits ONE #################################################
+###############################################################################################################
+
+# Calculate accuracy of prediction on final timepoint, as a mean of 100 accuracies with different
+# Train-Test stratified splits. Stratfication is performed on all metadata categories 
+multilogreg_stratified_One <- function(infants,pososto,timepoint,end_timepoint,meta_file,Ncomb){
+  
+  logreg <- as.data.frame(matrix(NA,nrow = nrow(infants),ncol = ncol(meta_file)))
+  colnames(logreg)= c(paste('Cluster_at',end_timepoint,sep = '_'),timepoint,colnames(meta_file)[3:ncol(meta_file)])
+  rownames(logreg)= rownames(infants)
+
+  for (deigma in (rownames(infants))){
+    
+    subTab = meta_file[meta_file[,1] %in% deigma & meta_file[,2] == as.numeric(timepoint), 3:ncol(meta_file)]
+    
+    if (Ncomb > 1){
+      if (nrow(subTab) == 1){  
+        logreg[deigma, colnames(meta_file)[3:ncol(meta_file)]] = subTab
+      }
+    }
+    else if (Ncomb == 1){
+      if (length(subTab) == 1){
+        logreg[deigma, colnames(meta_file)[3:ncol(meta_file)]] = subTab
+      }
+    }
+    logreg[deigma, 2] = ifelse(test = length(infants[deigma,timepoint]), yes = infants[deigma,timepoint], no = NA)
+    logreg[deigma, 1] = ifelse(test = length(infants[deigma,as.character(end_timepoint)]), yes = infants[deigma,as.character(end_timepoint)], no = NA)
+  
+    
+  }
+  logreg = logreg[complete.cases(logreg),]
+  
+  train_index <- createDataPartition(y = logreg[,paste('Cluster_at',end_timepoint,sep = '_')], p = pososto, list = F, times = 100, groups = max(apply(X = logreg, MARGIN = 2, FUN = function(x){length(unique(x))})) )
+  
+  acc <- c()
+  tra <- c()
+  paragontes <- list()
+  fo = as.formula(paste(paste('Cluster_at',end_timepoint,sep = '_'),'~.',sep = ''))
+  for (j in 1:ncol(train_index)){
+    trainset = logreg[train_index[,j],]
+    testset = logreg[-train_index[,j],]
+    if (all(apply(X = logreg, MARGIN = 2, FUN = function(x){length(unique(x))})== apply(X = trainset, MARGIN = 2, FUN = function(x){length(unique(x))}))){
+      
+      apotelesmata <- multinom(formula = fo, data = trainset ,censored = T, model = T)
+      
+      giatotrain <- apotelesmata %>% predict(trainset[,2:ncol(trainset)])
+      provlepseis <- apotelesmata %>% predict(testset[,2:ncol(testset)])
+      acc[j] = (sum(provlepseis == testset[,1])/ nrow(testset)) *100
+      tra[j] = (sum(giatotrain == trainset[,1])/nrow(trainset))*100
+    }
+  }
+  
+  acc = na.omit(acc)
+  tra = na.omit(tra)
+  
+  accteststr <- mean(acc)
+  acctrainstr = mean(tra)
+  trainsd <- sd(tra)
+  testsd <- sd(acc)
+
+  return (c(accteststr,acctrainstr, trainsd,testsd))
+}
+
+# Calculate the optimal split percentage between .65 and .90 for predicting the final timepoint on the
+# exact previous one to be used in all splits for all timepoints. The criterion is the best accuracy  
+# as derived by the previous function with argument the different percentages.
+bestpososto <- function (infants){
+  olataaccuracies <- c()
+  sepoiopososto <- c()
+  for (poso in 65:90){
+    poso = poso/100
+    telika <- multilogreg_stratified_One(infants = infants, pososto = poso, timepoint = tail(timepoints_to_perform,1), end_timepoint = end_timepoint,meta_file = files,Ncomb = Ncomb)
+    accteststr = telika[1]
+    acctrainstr = telika[2]
+    trainsd = telika[3]
+    testsd = telika[4]
+    olataaccuracies= c(olataaccuracies,accteststr)
+    sepoiopososto = c(sepoiopososto,poso)
+  }
+  
+  return (sepoiopososto[which.max(olataaccuracies)])
+}
+
+
+# Assign the best percentage on a variable to use on the final calculations
+to_kalitero_pososto <- bestpososto(infants = infants)
+
+###############################################################################################################
+################################## Initializing variables ONE #################################################
+###############################################################################################################
+
+acctest <- c()
+acctrain <-c()
+accteststr <- c()
+acctrainstr <- c()
+trainsd <- c()
+testsd <- c()
+paragontes <- list()
+###############################################################################################################
+############################ Calculate Accuracies on timepoints ONE ###########################################
+###############################################################################################################
+
+
+
+
+# Loop to create a model from every timepoint to the final timepoint as selected from the first loop
+for (timepoint in timepoints_to_perform){
+  
+  LOOTeliko <- LOO_multilogreg_One(infants = infants, timepoint = timepoint,end_timepoint = end_timepoint,meta_file = files,Ncomb = Ncomb)
+  
+  acctrain = c(acctrain,LOOTeliko[1])
+  acctest = c(acctest,LOOTeliko[2])
+  
+  Splitteliko <- multilogreg_stratified_One(infants = infants, pososto = to_kalitero_pososto,timepoint =  timepoint,meta_file =  files, end_timepoint = end_timepoint, Ncomb = Ncomb)
+  
+  
+  accteststr <- c(accteststr,Splitteliko[1])
+  acctrainstr <- c(acctrainstr, Splitteliko[2])
+  trainsd <- c(trainsd, Splitteliko[3])
+  testsd <- c(testsd, Splitteliko[4])
+}  
+
+
+###############################################################################################################
+####################################### WRITE ACCURACY FILE  ##################################################
+###############################################################################################################
+
+# Select the effects that created the model
+effect = paste(effector_combinations[combination,],collapse = ' & ')
+
+
+# Adding to the lists in order to export the correct matrix
+trainLOO = rbind (trainLOO, c(rep(0,(ncol(infants)-length(acctrain))),acctrain,effect))
+testLOO  = rbind (testLOO,  c(rep(0,(ncol(infants)-length(acctest))),acctest,effect))
+testStr  = rbind (testStr,  c(rep(0,(ncol(infants)-length(accteststr))),accteststr,effect))
+trainStr = rbind (trainStr, c(rep(0,(ncol(infants)-length(acctrainstr))),acctrainstr,effect))
+
+}
+}
+
+###############################################################################################################
+###############################################################################################################
+################### PERFORMING THE TASK ON THE ORIGINAL FILES #################################################
+###############################################################################################################
+###############################################################################################################
+
+
+###############################################################################################################
+############################ LEAVE ONE OUT ORIGINAL ###########################################################
+###############################################################################################################
+
+# Calculate mean accuracy of prediction on final timepoint, via Leave One Out method of splitting Train-Test sets
+LOO_multilogreg <- function (infants,timepoint, end_timepoint){
+  
+  
+  # Create the matrix with columns the state on the timepoint, the metadata and as a response the state on the last timepoint
+  logreg <- as.data.frame(matrix(NA,nrow = nrow(infants),ncol = ncol(meta_file)))
+  colnames(logreg)= c(paste('Cluster_at',end_timepoint,sep = '_'), timepoint , colnames(meta_file)[3:ncol(meta_file)])
+  rownames(logreg)= rownames(infants)
+  
+  for (deigma in (rownames(infants))){
+    subTab = meta_file[meta_file[,1] %in% deigma & meta_file[,2] == as.numeric(timepoint), 3:ncol(meta_file)]
+    if (nrow(subTab) == 1){
+      logreg[deigma, colnames(meta_file)[3:ncol(meta_file)]] = subTab[1,]
+    }
+    logreg[deigma, 2] = ifelse(test = length(infants[deigma,timepoint]), yes = infants[deigma,timepoint], no = NA)
+    logreg[deigma, 1] = ifelse(test = length(infants[deigma,as.character(end_timepoint)]), yes = infants[deigma,as.character(end_timepoint)], no = NA)
+  }
+  
+  # Remove NAs
+  logreg = logreg[complete.cases(logreg),]
+  
+  # Set the response variable
+  fo = as.formula(paste(paste('Cluster_at',end_timepoint,sep = '_'),'~.',sep = ''))
+  
+  acc <- c()
+  tra <- c()
+  for (j in 1:nrow(logreg)){
+    
+    # Setting training and test sets by leaving one out
+    trainset = logreg[1:nrow(logreg)!=j,]
+    testset = logreg[j,]
+    
+    # Train the model
+    apotelesmata <- multinom(formula = fo , data = trainset ,censored = T, model = T)
+    
+    # Predict for trainset
+    giatotrain <- apotelesmata %>% predict(trainset[,2:ncol(trainset)])
+    # Predict for testset
+    provlepseis <- apotelesmata %>% predict(testset[,2:ncol(testset)])
+    # Calculate accuracies
     acc[j] = (sum(provlepseis == testset[,1])/ nrow(testset)) *100
     tra[j] = (sum(provlepseis == trainset[,1])/nrow(trainset))*100
   
@@ -47,15 +279,16 @@ LOO_multilogreg <- function (infants,timepoint){
 
 
 ###############################################################################################################
-############################ Stratified Train/Test splits #####################################################
+############################ Stratified Train/Test splits ORIGINAL ############################################
 ###############################################################################################################
 
 # Calculate accuracy of prediction on final timepoint, as a mean of 100 accuracies with different
 # Train-Test stratified splits. Stratfication is performed on all metadata categories 
-multilogreg_stratified <- function(infants,pososto,timepoint){
+multilogreg_stratified <- function(infants,pososto,timepoint,times, end_timepoint){
   
+  # Create the matrix with columns the state on the timepoint, the metadata and as a response the state on the last timepoint
   logreg <- as.data.frame(matrix(NA,nrow = nrow(infants),ncol = ncol(meta_file)))
-  colnames(logreg)= c(paste('Cluster_at',tail(colnames(infants),1),sep = '_'),timepoint,colnames(meta_file)[3:ncol(meta_file)])
+  colnames(logreg)= c(paste('Cluster_at',end_timepoint,sep = '_'),timepoint,colnames(meta_file)[3:ncol(meta_file)])
   rownames(logreg)= rownames(infants)
   
   for (deigma in (rownames(infants))){
@@ -63,31 +296,40 @@ multilogreg_stratified <- function(infants,pososto,timepoint){
     if (nrow(subTab) == 1){
       logreg[deigma, colnames(meta_file)[3:ncol(meta_file)]] = subTab[1,]
     }
-    logreg[deigma, 2] = ifelse(test = length(infants[deigma,tail(colnames(infants),2)[1]]), yes = infants[deigma,timepoint], no = NA)
-    logreg[deigma, 1] = ifelse(test = length(infants[deigma,tail(colnames(infants),1)]), yes = infants[deigma,tail(colnames(infants),1)], no = NA)
+    logreg[deigma, 2] = ifelse(test = length(infants[deigma,timepoint]), yes = infants[deigma,timepoint], no = NA)
+    logreg[deigma, 1] = ifelse(test = length(infants[deigma,as.character(end_timepoint)]), yes = infants[deigma,as.character(end_timepoint)], no = NA)
   }
-  
+  # Remove NAs
   logreg = logreg[complete.cases(logreg),]
-
-  train_index <- createDataPartition(y = logreg[,paste('Cluster_at',tail(colnames(infants),1),sep = '_')], p = pososto, list = F, times = 100, groups = max(apply(X = logreg, MARGIN = 2, FUN = function(x){length(unique(x))})) )
+  
+  # Create different partitions to split train and test sets
+  train_index <- createDataPartition(y = logreg[,paste('Cluster_at',end_timepoint,sep = '_')], p = pososto, list = F, times = times, groups = max(apply(X = logreg, MARGIN = 2, FUN = function(x){length(unique(x))})) )
+  
+  # Set the response variable
+  fo = as.formula(paste(paste('Cluster_at',end_timepoint,sep = '_'),'~.',sep = ''))
   
   acc <- c()
   tra <- c()
   paragontes <- list()
   for (j in 1:ncol(train_index)){
+    
+    # Split train and test sets
     trainset = logreg[train_index[,j],]
     testset = logreg[-train_index[,j],]
     if (all(apply(X = logreg, MARGIN = 2, FUN = function(x){length(unique(x))})== apply(X = trainset, MARGIN = 2, FUN = function(x){length(unique(x))}))){
       
-      apotelesmata <- multinom(formula = Cluster_at_24 ~. , data = trainset ,censored = T, model = T)
-
+      # Create a model
+      apotelesmata <- multinom(formula = fo , data = trainset ,censored = T, model = T)
+      # Predict for the trainset
       giatotrain <- apotelesmata %>% predict(trainset[,2:ncol(trainset)])
+      # Predict for the testset
       provlepseis <- apotelesmata %>% predict(testset[,2:ncol(testset)])
+      # Calculate accuracies
       acc[j] = (sum(provlepseis == testset[,1])/ nrow(testset)) *100
       tra[j] = (sum(giatotrain == trainset[,1])/nrow(trainset))*100
     }
   }
-  
+  # Remove NAs
   acc = na.omit(acc)
   tra = na.omit(tra)
   
@@ -107,7 +349,7 @@ bestpososto <- function (infants){
   sepoiopososto <- c()
   for (poso in 65:90){
     poso = poso/100
-    telika <- multilogreg_stratified(infants = infants, pososto = poso, timepoint = rev(colnames(infants))[2])
+    telika <- multilogreg_stratified(end_timepoint = end_timepoint,infants = infants, pososto = poso, timepoint = rev(colnames(infants))[2], times = 100)
     accteststr = telika[1]
     acctrainstr = telika[2]
     trainsd = telika[3]
@@ -121,10 +363,9 @@ bestpososto <- function (infants){
 
 # Assign the best percentage on a variable to use on the final calculations
 to_kalitero_pososto <- bestpososto(infants = infants)
-to_kalitero_pososto
 
 ###############################################################################################################
-################################## Initializing variables #####################################################
+################################## Initializing variables ORIGINAL ############################################
 ###############################################################################################################
 
 acctest <- c()
@@ -135,18 +376,19 @@ trainsd <- c()
 testsd <- c()
 paragontes <- list()
 ###############################################################################################################
-############################ Calculate Accuracies on timepoints  ##############################################
+############################ Calculate Accuracies on timepoints ORIGINAL ######################################
 ###############################################################################################################
 
 
-for (timepoint in rev(colnames(infants))[2:ncol(infants)]){
+for (timepoint in timepoints_to_perform){
   
-  LOOTeliko <- LOO_multilogreg(infants = infants, timepoint = timepoint)
+  
+  LOOTeliko <- LOO_multilogreg(infants = infants, timepoint = timepoint,end_timepoint = end_timepoint)
   
   acctrain = c(acctrain,LOOTeliko[1])
   acctest = c(acctest,LOOTeliko[2])
   
-  Splitteliko <- multilogreg_stratified(infants, to_kalitero_pososto, timepoint)
+  Splitteliko <- multilogreg_stratified(infants, to_kalitero_pososto, timepoint, times = 100,end_timepoint = end_timepoint)
 
 
   accteststr <- c(accteststr,Splitteliko[1])
@@ -155,42 +397,58 @@ for (timepoint in rev(colnames(infants))[2:ncol(infants)]){
   testsd <- c(testsd, Splitteliko[4])
 }  
 
-print (paste('Test set mean accuracy', round(mean(accteststr),2), sep = ' = '))
-print (paste('Train set mean accuracy',round(mean(acctrainstr),2), sep = ' = '))
-
-print (paste('Test set  LOO mean accuracy',round(mean(acctest),2), sep = ' = '))
-print (paste('Train set LOO mean accuracy',round(mean(acctrain),2), sep = ' = '))
 
 ###############################################################################################################
-####################################### Plotting  #############################################################
+####################################### Plotting ##############################################################
 ###############################################################################################################
 
-#boxplot(acctest, acctrain ,names = c('TestSet Accuracy', 'TrainSet accuracy') , main = 'Accuracies Splits' ,outline = T, ylim = c(min(c(acctest,acctrain,accteststr,acctrainstr))-2,max(c(acctest,acctrain,accteststr,acctrainstr))+2))
+jpeg(filename = paste(dir_with_plots,paste('Accuracies of Models on Timepoint', end_timepoint,sep = ' '),sep = '/'))
+barplot(rbind(acctest,accteststr, acctrain,acctrainstr), beside = T, ylim = c(40,100), xpd = F ,names = timepoints_to_perform, col= c('paleturquoise4','paleturquoise3', 'darkolivegreen2', 'darkolivegreen3'))
+legend("topright", c("TestLOO","TestStratified", 'TrainLOO','TrainStratified'), fill=c('paleturquoise4','paleturquoise3', 'darkolivegreen2', 'darkolivegreen3'), cex = 1)
+abline(h = 40.3, col = "white", lwd = 2, lty = 2)
 
-#boxplot(accteststr, acctrainstr ,names = c('TestSet Accuracy', 'TrainSet accuracy') , main = 'Accuracies Splits' ,outline = T, ylim = c(min(c(accteststr,acctrainstr,acctest,acctrain))-2,max(c(accteststr,acctrainstr,acctest,acctrain))+2))
+dev.off()
 
-#boxplot(acctest,accteststr, acctrain, acctrainstr, names = c('TestSet LOO', 'TestSet Split', 'TrainSet LOO', 'TrainSet Split'), outline = T, ylim = c(min(c(accteststr,acctrainstr,acctest,acctrain))-2,max(c(accteststr,acctrainstr,acctest,acctrain))+2))
+###############################################################################################################
+########### SAVING ACCURACIES ACHIEVED ON TRAINING AND TEST SETS TO ACCURACY FILE #############################
+###############################################################################################################
 
 
-xrwma <- c('paleturquoise4','paleturquoise3', 'mediumturquoise', 'darkturquoise')
-for (i in 1:(ncol(infants)-1)){
-  jpeg(filename =paste(dir_with_plots, paste(paste('Multinomial Logistic Regression Accuracies',colnames(infants[i]),sep = ' of Timepoint '),'jpeg',sep = ' .'),sep = '/'))
-  barplot(cbind(acctest,accteststr, acctrain, acctrainstr)[i,] , name = c('Test LOO','Test Splits', 'Train LOO','Train Split') ,col= xrwma, main =paste('Mean Accuracy on Timepoint',rev(colnames(infants)[2:ncol(infants)])[i], sep = ' ') ,ylim = c(0,100) )
-  dev.off()
+# Adding to the lists in order to export the correct matrix
+trainLOO = rbind (trainLOO,  c('all',rep(0,(ncol(infants)-length(acctrain)-1)),acctrain))
+testLOO  = rbind (testLOO,   c('all',rep(0,(ncol(infants)-length(acctest)-1)),acctest))
+testStr  = rbind (testStr,   c('all',rep(0,(ncol(infants)-length(accteststr)-1)),accteststr))
+trainStr = rbind (trainStr,  c('all',rep(0,(ncol(infants)-length(acctrainstr)-1)),acctrainstr))
+
+
 }
-
 proc.time() - ptm
+
+
+###############################################################################################################
+####################################### PRACTICE ##############################################################
+###############################################################################################################
+
+
+colnames(trainLOO) = c('Effects',paste('From timepoint ',rev(colnames(infants)[1:ncol(infants)-1]),sep = ''),'Effects')
+colnames(testLOO)  = c('Effects',paste('From timepoint ',rev(colnames(infants)[1:ncol(infants)-1]),sep = ''),'Effects')
+colnames(trainStr) = c('Effects',paste('From timepoint ',rev(colnames(infants)[1:ncol(infants)-1]),sep = ''),'Effects')
+colnames(testStr)  = c('Effects',paste('From timepoint ',rev(colnames(infants)[1:ncol(infants)-1]),sep = ''),'Effects')
+
+write.table(x = trainLOO, file = paste(dir_with_files,'Training Sets LOO.csv', sep = '/') , col.names = T)
+write.table(x = testLOO,  file = paste(dir_with_files,'Test Sets LOO.csv',     sep = '/') , col.names = T)
+write.table(x = trainStr, file = paste(dir_with_files,'Training Sets Splitted.csv', sep = '/') , col.names = T)
+write.table(x = testStr,  file = paste(dir_with_files,'Test Sets Splitted.csv', sep = '/') , col.names = T)
 
 ###############################################################################################################
 ####################################### TO DO #################################################################
 ###############################################################################################################
 
-# Multinomial Logistic Regression on INFANTS (to check if a profiles on multiple timepoints can be predictive)
-
-# Find how to use formula globally
 
 
-acctest
-acctrain
-accteststr
-acctrainstr
+########### NA BGALO TA PLOTS GIA TO TRANSITION     #######################
+########### PERMANOVA GIA TOUS 2 CLUSTERS           #######################
+
+############## antikatastasi tvn kanonikov me ta orizontia ################
+
+#apply(infants,2,function(x){max(x,na.rm = T)})

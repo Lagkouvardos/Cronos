@@ -1,17 +1,70 @@
-#################### NO CHANGE IS NEEDED HERE ############################################
+##########################################################################################
+############ IN THIS FILE YOU CAN SET PARAMETERS AND FILE LOCATIONS ######################
+##########################################################################################
 
-#### You can select everything (Ctrl+A) and press run (Ctrl+Enter)  
+########### PLEASE FOLLOW THE INSTRUCTIONS CAREFULLY #####################################
+
+#' Please set the directory of the script as the working folder (e.g D:/studyname/Data/Chronos/)
+#' Note: the path is denoted by forward slash "/"
 setwd("~/Working_Chronos/Chronos_almost")              #<--- CHANGE ACCORDINGLY !!!
 
+#' Please give the file name of the normalized OTU-table without taxonomic classification
+input_otu = "Both_sequencing_OTUs.csv"           #<--- CHANGE ACCORDINGLY !!!
+#' Please give the name of the meta-file that contains individual sample information
+input_meta = "Both_Sequencings.csv"                #<--- CHANGE ACCORDINGLY !!!
+#' Please give the name of the phylogenetic tree constructed from the OTU sequences
+input_tree = "SOTUs-NJTree.tre"         #<--- CHANGE ACCORDINGLY !!!
 
-source('Parameters.R')
+# Please specify if the file contains both adult and infant data: 
+# If it contains adult data specify the name of the column (i.e. timepoint name) where they are saved
+adult_timepoint_name = 'MM'              #<--- CHANGE ACCORDINGLY
+
+
+# Please select the taxon in which the samples will be analyzed
+# Either type it in ' ' e.g. 'Order' or select a number between 1 and 5, where:
+# 1: Domain,
+# 2: Phylum
+# 3: Class
+# 4: Order
+# 5: Family
+
+taxonomic_level='Family'                          # <---- CHANGE ACCORDINGLY
+
+
+# Please select method for cluster representation. It can be either mean, or median.
+# Cluster representation via its mean calculates the mean abundancy of every taxon in the 
+# cluster and return the mean. It is preferable in larger datasets and creates a composition
+# not found in any of the samples on the cluster.
+# Cluster representation via its median calculates the median of the samples belonging to
+# the cluster. It is preferable in smaller datasets and returns a illustative composition
+# that belongs to a sample.
+representation_method = 'median'
+
+# Please select clustering method. It could be one of hierarchical or 
+# PAM (Partition Around Medoids). If your dataset is small, we recommend hierarchical
+# else, we recommend PAM. PAM is also recommended for expected well-separated datasets
+clustering_method = 'PAM'            # <---- CHANGE ACCORDINGLY
+
+
+# Please write the names of the 2 new directories, in which the output should be saved at:
+# Firstly, the one for the transition plots
+dir_with_plots= 'Plots'     # <---- CHANGE ACCORDINGLY
+# Secondly, the one with the files
+dir_with_files= 'Chronos_output_files' # <---- CHANGE ACCORDINGLY
+
+
+#######################################################################################################################
+#######################################################################################################################
+#######################################################################################################################
+#######################################################################################################################
+#######################################################################################################################
 dir.create(dir_with_plots, showWarnings = F)
 
 ##########################################################################################
 ############################ READING THE FILES ###########################################
 ##########################################################################################
 
-meta_file <- read.table (file = input_meta, check.names = FALSE, header = TRUE, dec = ".", sep = ",", row.names = 1, comment.char = "", stringsAsFactors = F)
+meta_file <- read.table (file = input_meta, check.names = FALSE, header = TRUE, dec = ".", sep = "\t", row.names = 1, comment.char = "", stringsAsFactors = F)
 # Clean table from empty lines
 meta_file <- data.frame(meta_file[!apply(is.na(meta_file) | meta_file=="",1,all),])
 # Order the mapping file by sample names (ascending)
@@ -67,9 +120,8 @@ taxa_matrix <- data.frame(t(taxa_matrix))
 ##########################################################################################
 ################# CONVERT FILES TO DESIRABLE FORMAT ######################################
 ##########################################################################################
-
 # keep only those rows that appear in the mapping file
-otu_file <- otu_file[,rownames(meta_file)]
+otu_file <- otu_file[,colnames(otu_file) %in% rownames(meta_file)]
 # OTU-table and mapping file should have the same order and number of sample names
 # Order the OTU-table by sample names (ascending)
 otu_file <- otu_file[,order(names(otu_file))]
@@ -84,7 +136,7 @@ meta_file <- meta_file[rownames(otu_file),]
 ############### CHECKING FOR AND INSTALLING PACKAGES  ####################################
 ##########################################################################################
 
-packages <-c("ade4","dplyr","GUniFrac","phangorn","cluster","fpc","markovchain", 'spgs','caret','nnet','gtools') 
+packages <-c("ade4","dplyr","GUniFrac","phangorn","cluster","fpc","markovchain", 'spgs','caret') 
 # Function to check whether the package is installed
 InsPack <- function(pack)
 {
@@ -135,13 +187,26 @@ colnames(samples_on_clusters)<- names(timepoint_list)
 ################ CLUSTERING SAMPLES ON TIMEPOINTS ########################################
 ##########################################################################################
 # Calculate the UniFrac distance matrix for comparing microbial communities
-
 for (name in names(timepoint_list)){
+  
   unifracs <- GUniFrac(otu.tab = timepoint_list[[name]] ,tree = rooted_tree, alpha = c(0.0,0.5,1.0))$unifracs
   
   # Weight on abundant lineages so  the distance is not dominated by highly abundant lineages with 0.5 having the best power
   unifract_dist <- unifracs[, , "d_0.5"]
-  
+
+#  mikra <- rownames(unifract_dist)[nchar(rownames(unifract_dist))<6]
+#  megala <- rownames(unifract_dist)[nchar(rownames(unifract_dist))>6]
+#  pinakaki <- matrix(NA, nrow = length(mikra),ncol = 1)
+#  rownames(pinakaki) = mikra
+#  for (i in mikra){
+#    orizontio <-  unlist(strsplit(i,split = "/"))[1]
+ #   if (length(unifract_dist[i ,megala[grep(pattern =paste("^",orizontio,sep=""),x = megala , perl = T)]])){
+#      pinakaki[i,1] = unifract_dist[i ,megala[grep(pattern =paste("^",orizontio,sep=""),x = megala , perl = T)]]
+#    }
+#  }
+  # write.table(pinakaki,file = paste(dir_with_files,'Both_Sequencing_Projects_Distances', sep = '/'),append = T)
+
+
   PAM_clustering <- function(unifract_dist,k){
     return (pam(x = unifract_dist, k = k,diss = T)$clustering)
   }
@@ -158,7 +223,7 @@ for (name in names(timepoint_list)){
       clusteringH <- H_clustering(unifract_dist = unifract_dist, k = k)
       calinski_harabasz_valuesH= c(calinski_harabasz_valuesH,(calinhara(x = unifract_dist,cn = k, clustering = clusteringH)))
     }
-  
+    
     for (k in 2:9){
       clusteringP <- PAM_clustering(unifract_dist = unifract_dist, k = k)
       calinski_harabasz_valuesP= c(calinski_harabasz_valuesP,(calinhara(x = unifract_dist,cn = k, clustering = clusteringP)))
@@ -170,7 +235,7 @@ for (name in names(timepoint_list)){
     else if (clustering_method== 'PAM'){
       calinski_harabasz_values = calinski_harabasz_valuesP
     }
-
+    
     which.min(diff(calinski_harabasz_values))
     kaliterotero<- which.min(diff(calinski_harabasz_values))
     highest <- which.max(calinski_harabasz_values) +1
@@ -213,7 +278,7 @@ for (name in names(timepoint_list)){
     plot (clusters)
     clusters = cutree(clusters,k = best_k)
     dev.off()
-
+    
   } else if (clustering_method == 'PAM'){
     clusters <- PAM_clustering(unifract_dist = unifract_dist ,k =best_k)
   }
@@ -227,4 +292,3 @@ for (name in names(timepoint_list)){
   
   
 }
-######################### END OF SECTION #################################################

@@ -43,7 +43,7 @@ representation_method = 'median'
 # Please select clustering method. It could be one of hierarchical or 
 # PAM (Partition Around Medoids). If your dataset is small, we recommend hierarchical
 # else, we recommend PAM. PAM is also recommended for expected well-separated datasets
-clustering_method = 'Hierarchical'            # <---- CHANGE ACCORDINGLY
+clustering_method = 'PAM'            # <---- CHANGE ACCORDINGLY
 
 
 # Please write the names of the 2 new directories, in which the output should be saved at:
