@@ -1,15 +1,13 @@
 #################### NO CHANGE IS NEEDED HERE ############################################
 
 #### You can select everything (Ctrl+A) and press run (Ctrl+Enter)  
-setwd("~/Working_Chronos/Chronos_almost")              #<--- CHANGE ACCORDINGLY !!!
-
 
 source('Parameters.R')
 dir.create(dir_with_plots, showWarnings = F)
 
-##########################################################################################
-############################ READING THE FILES ###########################################
-##########################################################################################
+
+############################ Reading the files ###########################################
+
 
 meta_file <- read.table (file = input_meta, check.names = FALSE, header = TRUE, dec = ".", sep = ",", row.names = 1, comment.char = "", stringsAsFactors = F)
 # Clean table from empty lines
@@ -21,12 +19,8 @@ otu_file <- read.csv(file = input_otu,sep = '\t',row.names = 1,header = T, strin
 # Clean table from empty lines
 otu_file <- otu_file[!apply(is.na(otu_file) | otu_file =="",1,all),]
 
-######################### END OF SECTION #################################################
 
-##########################################################################################
-### THIS SECTION EXPRESSES THE TAXONOMIC PROFILE OF EACH SAMPLE AT THE SELECTED LEVEL ####
-##########################################################################################
-
+############ Express each sample at the selected taxonomy level ##############################
 taxonomy_of_sample<- function(taxonomic_level,otu_file){
   
   taxonomic_levels<- c('Domain','Phylum','Class','Order','Family','Genus')
@@ -62,11 +56,7 @@ taxa_matrix<-function(otus_taxonomic,otu_file){
 taxa_matrix<- taxa_matrix(otus_taxonomic,otu_file)
 taxa_matrix <- data.frame(t(taxa_matrix))
 
-######################### END OF SECTION #################################################
-
-##########################################################################################
-################# CONVERT FILES TO DESIRABLE FORMAT ######################################
-##########################################################################################
+############ Convert files to desirable format ######################################
 
 # keep only those rows that appear in the mapping file
 otu_file <- otu_file[,rownames(meta_file)]
@@ -78,18 +68,14 @@ otu_file <- data.frame(t(otu_file))
 # keep only those that appear in the otu file
 meta_file <- meta_file[rownames(otu_file),]
 
-######################### END OF SECTION #################################################
-
-##########################################################################################
-############### CHECKING FOR AND INSTALLING PACKAGES  ####################################
-##########################################################################################
+############ Checking for and installing packages ####################################
 
 packages <-c("ade4","dplyr","GUniFrac","phangorn","cluster","fpc","markovchain", 'spgs','caret','nnet','gtools') 
 # Function to check whether the package is installed
 InsPack <- function(pack)
 {
   if ((pack %in% installed.packages()) == FALSE) {
-    install.packages(pack,repos ="http://cloud.r-project.org/")
+    install.packages(pack,dependencies = T,quiet = T)
   } 
 }
 
@@ -106,11 +92,7 @@ tree_file <- read.tree(input_tree)
 # Root the OTU tree at midpoint 
 rooted_tree <- midpoint(tree_file)
 
-######################### END OF SECTION #################################################
-
-##########################################################################################
-############# DIVIDE THE DATASET INTO DIFFERENT TIMEPOINTS ###############################
-##########################################################################################
+############ Divide the dataset into different timepoints ########################
 
 timepoint_collection <- function(otu_file,meta_file){
   timepoints = unique(meta_file[,'Timepoint'])
@@ -129,11 +111,8 @@ samples_on_clusters<-matrix(0, ncol = length(timepoint_list), nrow= nrow(unique(
 row.names(samples_on_clusters)<- unique(meta_file[,'Sample'])
 colnames(samples_on_clusters)<- names(timepoint_list)
 
-######################### END OF SECTION #################################################
+############ Clustering of samples on all timepoints ###############################
 
-##########################################################################################
-################ CLUSTERING SAMPLES ON TIMEPOINTS ########################################
-##########################################################################################
 # Calculate the UniFrac distance matrix for comparing microbial communities
 
 for (name in names(timepoint_list)){
@@ -146,80 +125,46 @@ for (name in names(timepoint_list)){
     return (pam(x = unifract_dist, k = k,diss = T)$clustering)
   }
   
-  H_clustering <- function(unifract_dist,k){
-    clusters = hclust(d = as.dist(unifract_dist),method = 'ward.D2')
-    return(cutree(clusters,k=k))
-  }
   
   optimal_k<- function(unifract_dist, clustering_method){
-    calinski_harabasz_valuesH <-c()
-    calinski_harabasz_valuesP <-c()
-    for (k in 2:9){
-      clusteringH <- H_clustering(unifract_dist = unifract_dist, k = k)
-      calinski_harabasz_valuesH= c(calinski_harabasz_valuesH,(calinhara(x = unifract_dist,cn = k, clustering = clusteringH)))
-    }
+    calinski_harabasz_values <-c()
   
     for (k in 2:9){
       clusteringP <- PAM_clustering(unifract_dist = unifract_dist, k = k)
-      calinski_harabasz_valuesP= c(calinski_harabasz_valuesP,(calinhara(x = unifract_dist,cn = k, clustering = clusteringP)))
+      calinski_harabasz_values= c(calinski_harabasz_values,(calinhara(x = unifract_dist,cn = k, clustering = clusteringP)))
     }
     
-    if (clustering_method == 'Hierarchical'){
-      calinski_harabasz_values = calinski_harabasz_valuesH
-    }
-    else if (clustering_method== 'PAM'){
-      calinski_harabasz_values = calinski_harabasz_valuesP
-    }
-
-    which.min(diff(calinski_harabasz_values))
-    kaliterotero<- which.min(diff(calinski_harabasz_values))
+    best_delta_score<- which.min(diff(calinski_harabasz_values))
     highest <- which.max(calinski_harabasz_values) +1
-    kalitero <- calinski_harabasz_values[kaliterotero]- calinski_harabasz_values[highest] - min(diff(calinski_harabasz_values))
-    if (kalitero>0){
-      kalitero <- which.max(calinski_harabasz_values) +1
+    best_final_score <- calinski_harabasz_values[best_delta_score]- calinski_harabasz_values[highest] - min(diff(calinski_harabasz_values))
+    if (best_final_score>0){
+      best_final_score <- which.max(calinski_harabasz_values) +1
     }
     else {
-      kalitero <- which.min(diff(calinski_harabasz_values)) +1
+      best_final_score <- which.min(diff(calinski_harabasz_values)) +1
     }
-    return (list(kalitero, calinski_harabasz_valuesP, calinski_harabasz_valuesH))
+    return (list(best_final_score, calinski_harabasz_values))
   }
   
+  # Set the best k for the timepoint
   optimal_k_results = optimal_k(unifract_dist = unifract_dist,clustering_method = clustering_method)
-  optimal_k_results
   best_k = optimal_k_results[[1]]
-  calinski_harabasz_valuesP = optimal_k_results[[2]]
-  calinski_harabasz_valuesH = optimal_k_results[[3]]
+  calinski_harabasz_values = optimal_k_results[[2]]
   
-  if (max(calinski_harabasz_valuesH)>max(calinski_harabasz_valuesP)){
-    jpeg(filename =paste(dir_with_plots, paste(paste('Calinski-Harabasz_index',name,sep = ' of Timepoint '),'jpeg',sep = ' .'),sep = '/'))
-    plot (calinski_harabasz_valuesH,type = 'l', x = 2:9, col='blue',main = 'Calinski-Harabasz scores of different #Clusters')
-    lines(calinski_harabasz_valuesP, x = 2:9, col= 'brown')
-    legend("topright", c("Hierarchical","PAM"), fill=c("blue","brown"))
-    dev.off()
-    
-  }  else {
-    jpeg(filename =paste(dir_with_plots, paste(paste('Calinski-Harabasz_index',name,sep = ' of Timepoint '),'jpeg',sep = ' .'),sep = '/'))
-    plot (calinski_harabasz_valuesP,type = 'l' ,x = 2:9, col='blue',main = 'Calinski-Harabasz scores of different #Clusters' , ylim=(c(0,max(calinski_harabasz_valuesP) + max(calinski_harabasz_valuesP)*0.2)))
-    lines(calinski_harabasz_valuesH, x = 2:9, col= 'brown')
-    legend("topright", c("PAM","Hierarchical"), fill=c("blue","brown"))
-    dev.off()
-    
-  }
+  # Export plot with the Calinski-Harabasz scores for each k
+  jpeg(filename =paste(dir_with_plots, paste(paste('Calinski-Harabasz_index',name,sep = ' of Timepoint '),'jpeg',sep = ' .'),sep = '/'))
+  plot (calinski_harabasz_values,type = 'l' ,x = 2:9, col='blue',main = 'Calinski-Harabasz scores of different #Clusters' , ylim=(c(0,max(calinski_harabasz_values) + max(calinski_harabasz_values)*0.2)))
+  legend("topright", c("PAM"), fill=c("blue"))
+  dev.off()
   
+  # Perform clustering
+  clusters <- PAM_clustering(unifract_dist = unifract_dist ,k =best_k)
   
-  if (clustering_method == 'Hierarchical'){
-    clusters <- hclust(d = as.dist(unifract_dist),method = 'ward.D2')
-    jpeg(filename = paste(dir_with_plots,paste('Hierarchical Clustering of',paste('Timepoint',name,sep=' '),sep = ' '),sep = '/'))
-    plot (clusters)
-    clusters = cutree(clusters,k = best_k)
-    dev.off()
-
-  } else if (clustering_method == 'PAM'){
-    clusters <- PAM_clustering(unifract_dist = unifract_dist ,k =best_k)
-  }
+  # Assing the samples to the estimated clusters
   samples_on_clusters[meta_file[row.names(unifract_dist),'Sample'],name]<- clusters
   samples_on_clusters[samples_on_clusters==0] <- NA
   
+  # Export MDS plot of the samples on the timepoint
   scall <- cmdscale(d = unifract_dist,eig = F,k = 2)
   jpeg(filename = paste(dir_with_plots,paste('MDS Plot of',paste('Timepoint',name,sep=' '),sep = ' '),sep = '/'))
   plot(scall , main = name)
@@ -227,4 +172,3 @@ for (name in names(timepoint_list)){
   
   
 }
-######################### END OF SECTION #################################################

@@ -1,5 +1,4 @@
-setwd('Working_Chronos/Chronos_almost/')
-
+setwd('~/Working_Chronos/Chronos_almost/')
 ptm <- proc.time()
 source('Markov.R')
 
@@ -15,7 +14,6 @@ effectors = colnames(meta_file)[3:ncol(meta_file)]
 
 ###################### Perform Tasks on all Timepoints ###############################
 
-Npredictions = 0
 # Loop to create a model for each timepoint on the dataset
 for (end_timepoint in head(as.numeric(rev(colnames(infants))),n = (ncol(infants))-1)){
   
@@ -178,6 +176,7 @@ trainStr = rbind (trainStr, c('Null',rep(0,(ncol(infants)-length(acctrainstr)-1)
 
 
 
+
 ###################### Perform all Tasks with different combinations of metadata ############
 
 for (Ncomb in 1: (ncol(meta_file)-3)){
@@ -185,9 +184,6 @@ for (Ncomb in 1: (ncol(meta_file)-3)){
   effector_combinations = combinations(v = effectors,r = Ncomb, repeats.allowed = F, n = length(effectors))
     # Loop to select all possible combinations of features from the dataset  
     for (combination in 1:nrow(effector_combinations)){
-      if (Ncomb ==1){
-        Npredictions = Npredictions +1
-      }
       # Select the table with the corresponding features on the corresponding timepoint
       files = meta_file[,c('Sample','Timepoint',effector_combinations[combination,])]
       
@@ -462,6 +458,7 @@ multilogreg_stratified <- function(infants,pososto,timepoint,times, end_timepoin
       giatotrain <- apotelesmata %>% predict(trainset)
       # Predict for the testset
       provlepseis <- apotelesmata %>% predict(testset)
+      
       # Calculate accuracies
       acc[j] = (sum(provlepseis == testset[,1])/ nrow(testset)) *100
       tra[j] = (sum(giatotrain == trainset[,1])/nrow(trainset))*100
@@ -551,6 +548,13 @@ dev.off()
 
 }
 
+###################### Calculate all possible combinations of metadata calculated ##########################
+Npredictions = 0
+for (r in 1:length(effectors)){
+  Npredictions= Npredictions +(nrow(combinations(n = length(effectors),r = r,v = effectors,set = T,repeats.allowed = F)))
+}
+Npredictions = Npredictions +1
+
 ###################### Write files of All Calculated Accuracies ############################################
 rownames(trainStr) = trainStr[,1]
 rownames(trainLOO)= trainLOO[,1]
@@ -571,6 +575,8 @@ write.table(x = trainStr, file = paste(dir_with_files,'All Accuracies of Trainin
 write.table(x = testStr,  file = paste(dir_with_files,'All Accuracies of Test Sets Splitted.csv', sep = '/')  , col.names = F,row.names = T)
 
 
+###################### Calculate random estimators performance ##########################################
+random_estimator = 100/rev(apply (X = infants,MARGIN = 2,FUN = function(x){max(x,na.rm = T)}))
 ###################### Write files of Best Accuracies TestLOO ###########################################
 
 
@@ -583,14 +589,12 @@ for (i in 1:(length(TotimepointIndeces)-1)){
   metadata[i] = rownames(testLOO)[which.max(testLOO[TotimepointIndeces[i]:TotimepointIndeces[i+1],i])]
   
 }
-
-write.csv(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(infants)[2:ncol(infants)])), c(rev(colnames(infants))[2:ncol(infants)]), sep = ' from Timepoint '),maxaccuracies,metadata),file = paste(dir_with_files,'Maximum_Accuracies_of_TestLOO.csv',sep = '/'),row.names = F)
+write.csv(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(infants)[2:ncol(infants)])), c(rev(colnames(infants))[2:ncol(infants)]), sep = ' from Timepoint '),maxaccuracies,metadata,random_estimator[1:length(random_estimator)-1]),file = paste(dir_with_files,'Maximum_Accuracies_of_TestLOO.csv',sep = '/'),row.names = F)
 
 ###################### Write files of Best Accuracies TestSplits ########################################
 
 maxaccuracies <- c()
 metadata <- c()
-testStr
 for (i in 1:(length(TotimepointIndeces)-1)){
   
   maxaccuracies[i]   = max(testStr[TotimepointIndeces[i]:TotimepointIndeces[i+1],i])
@@ -598,13 +602,12 @@ for (i in 1:(length(TotimepointIndeces)-1)){
   
 }
 
-write.csv(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(infants)[2:ncol(infants)])), c(rev(colnames(infants))[2:ncol(infants)]), sep = ' from Timepoint '),maxaccuracies,metadata),file = paste(dir_with_files,'Maximum_Accuracies_of_Stratified_Tests.csv',sep = '/'),row.names = F)
+write.csv(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(infants)[2:ncol(infants)])), c(rev(colnames(infants))[2:ncol(infants)]), sep = ' from Timepoint '),maxaccuracies,metadata,random_estimator[1:length(random_estimator)-1]),file = paste(dir_with_files,'Maximum_Accuracies_of_Stratified_Tests.csv',sep = '/'),row.names = F)
 
 ###################### Write files of Best Accuracies TrainLOO ########################################
 
 maxaccuracies <- c()
 metadata <- c()
-trainLOO
 for (i in 1:(length(TotimepointIndeces)-1)){
   
   maxaccuracies[i]   = max(trainLOO[TotimepointIndeces[i]:TotimepointIndeces[i+1],i])
@@ -612,7 +615,7 @@ for (i in 1:(length(TotimepointIndeces)-1)){
   
 }
 
-write.csv(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(infants)[2:ncol(infants)])), c(rev(colnames(infants))[2:ncol(infants)]), sep = ' from Timepoint '),maxaccuracies,metadata),file = paste(dir_with_files,'Maximum_Accuracies_of_TrainLOO.csv',sep = '/'),row.names = F)
+write.csv(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(infants)[2:ncol(infants)])), c(rev(colnames(infants))[2:ncol(infants)]), sep = ' from Timepoint '),maxaccuracies,metadata,random_estimator[1:length(random_estimator)-1]),file = paste(dir_with_files,'Maximum_Accuracies_of_TrainLOO.csv',sep = '/'),row.names = F)
 
 ###################### Write files of Best Accuracies TrainSplits ########################################
 
@@ -626,4 +629,16 @@ for (i in 1:(length(TotimepointIndeces)-1)){
   
 }
 
-write.csv(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(infants)[2:ncol(infants)])), c(rev(colnames(infants))[2:ncol(infants)]), sep = ' from Timepoint '),maxaccuracies,metadata),file = paste(dir_with_files,'Maximum_Accuracies_of_TrainSplits.csv',sep = '/'),row.names = F)
+write.csv(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(infants)[2:ncol(infants)])), c(rev(colnames(infants))[2:ncol(infants)]), sep = ' from Timepoint '),maxaccuracies,metadata,random_estimator[1:length(random_estimator)-1]),file = paste(dir_with_files,'Maximum_Accuracies_of_TrainSplits.csv',sep = '/'),row.names = F)
+
+
+print (' Analysis Completed ')
+print ('_____________________________________________')
+print ('Results are saved in the preselected folders ')
+print ('_____________________________________________')
+
+
+
+
+  
+

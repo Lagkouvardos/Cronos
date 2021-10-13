@@ -5,10 +5,7 @@
 source('Clustering.R')
 
 
-##########################################################################################
-####################### MARKOVIAN CHAIN CHECK ############################################
-##########################################################################################
-
+############ Markovian property check ################################################
 
 state_calculator = function(infants,t0,t2){
   states <- c()
@@ -87,36 +84,24 @@ Markov_Test_X2 <- function(infants){
   return (girna)
 }
 
-Markovian_Property <- Markov_Test_X2(infants = infants)
-
-
-
-######################### END OF SECTION #################################################
-
-##########################################################################################
-####################### CLAIM TRANSITION MATRIX ##########################################
-##########################################################################################
+Markovian_Check <- Markov_Test_X2(infants = infants)
+Markovian_property= all(Markovian_Check[1,]==1)
+############ Claim transition matrix ################################################
 
 matrix_of_transitions <- matrix(0, nrow = max(infants_on_clusters, na.rm = T), ncol = max(infants_on_clusters,na.rm = T))
-
+blabla = matrix(0, nrow = max(infants_on_clusters, na.rm = T), ncol = max(infants_on_clusters,na.rm = T))
 for (i in 1:(ncol(infants_on_clusters)-1)){
   for (j in min(infants_on_clusters[,i],na.rm = T):max(infants_on_clusters[,i],na.rm = T)){
     for (k in min(infants_on_clusters[,i+1],na.rm = T):max(infants_on_clusters[,i+1],na.rm = T)){
-  
-        matrix_of_transitions[j,k] = sum(infants_on_clusters[infants_on_clusters[,i]==j,(i+1)]==k,na.rm = T)/length(infants_on_clusters[infants_on_clusters[,i]==j,(i+1)])
-      }
+      
+        matrix_of_transitions[j,k] = sum(infants_on_clusters[infants_on_clusters[,i]==j,(i+1)]==k,na.rm = T)/sum(infants_on_clusters[,i]==j & !is.na(infants_on_clusters[,i+1]),na.rm = T)
+      
+        }
     }
-  }
-
-#matrix_of_transitions
+}
 
 
-##########################################################################################
-
-##########################################################################################
-######################## SPECIFY TAXA ON CLUSTERS   ######################################
-##########################################################################################
-
+############ Specify taxa on clusters #################################################
 
 taxa_per_cluster <- function(taxa_matrix,samples_on_clusters,timepoint_list, representation_method){
   taxa_clusters <- list()
@@ -153,10 +138,7 @@ samples_on_clusters = samples_on_clusters[,c(as.character(sort(as.numeric(colnam
 
 infants<- samples_on_clusters[is.na(samples_on_clusters[,adult_timepoint_name]),1:ncol(samples_on_clusters)-1]
 
-######################### END OF SECTION #################################################
-
-################ WRITE TAB DELIMITED FILES WITH THE OUTPUTS  #############################
-##########################################################################################
+############ Write comma delimited files with outputs ####################################
 
 dir.create(dir_with_files, showWarnings = F)
 
@@ -166,20 +148,15 @@ colnames(taxa_clusters)<-lapply(X = colnames(taxa_clusters), FUN = function(x){p
 write.csv(x = samples_on_clusters, file = paste(dir_with_files, "Samples_in_Timepoint-specific_Clusters.csv",sep = '/'), row.names = T)
 write.csv(x = taxa_clusters,       file = paste(dir_with_files, "Taxonomic_profile_of_clusters.csv", sep = '/'), row.names = T)
 
-######################### END OF SECTION #################################################
 
-
-############## PRACTICE ############################
-
-setwd('/home/arislitos/Working_Chronos/Chronos_almost/')
-arnitiko <- read.csv(file = 'arnitiko_test.csv', sep = ',', header = T, check.names = F)
-thetiko2 <- read.csv(file = 'thetiko2.csv', sep = ',', header = T, check.names = F)
-plin <- Markov_Test_X2(arnitiko)[1,]
-diko_mou <- Markov_Test_X2(infants = infants)[1,]
-sin <- Markov_Test_X2(thetiko2)[1,]
-l1= c('Positive Control')
-l2 = c('Negative Control')
-
-############## COMMENTS ############################
-
+# Renaming the columns and 
+No_clusters_per_timepoint = apply(infants, 2,function(x){max(x,na.rm = T)})
+transition_names = c()
+for (j in 1:length(No_clusters_per_timepoint)){
+  for (i in 1:(No_clusters_per_timepoint[j])){
+    transition_names= c(transition_names,paste( paste('Timepoint',colnames(infants)[j],sep = ' '), paste( 'Cluster',i,sep = ' '),sep = ' '))
+  }
+}
+rownames(matrix_of_transitions)= paste('From ', transition_names,sep = '')
+write.csv(x = matrix_of_transitions,file = paste(dir_with_files,'Transition_Matrix.csv',sep = '/') , row.names = T,col.names = paste('To '  , transition_names,sep = ''))
 
