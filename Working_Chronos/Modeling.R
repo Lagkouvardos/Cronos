@@ -714,7 +714,6 @@ BIC_list
 ################################################ COMMENTS #################################################################################################
 ###########################################################################################################################################################
 
-
 # We assume that the phylogenetic distance (as calculated by the Unifrac metric) of one sample to the rest follows a normal distribution between a cluster.
 # For an infinite numberof samples we can find at least one, the distances between which and all the others of the cluster follow a normal distribution.
 # Like the medoid or mean of the cluster. Based on that assumption we perform Gaussian Mixture Modeling to check whether the samples repressented here, 
