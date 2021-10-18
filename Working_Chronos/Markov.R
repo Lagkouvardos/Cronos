@@ -89,7 +89,6 @@ Markovian_property= all(Markovian_Check[1,]==1)
 ############ Claim transition matrix ################################################
 
 matrix_of_transitions <- matrix(0, nrow = max(infants_on_clusters, na.rm = T), ncol = max(infants_on_clusters,na.rm = T))
-blabla = matrix(0, nrow = max(infants_on_clusters, na.rm = T), ncol = max(infants_on_clusters,na.rm = T))
 for (i in 1:(ncol(infants_on_clusters)-1)){
   for (j in min(infants_on_clusters[,i],na.rm = T):max(infants_on_clusters[,i],na.rm = T)){
     for (k in min(infants_on_clusters[,i+1],na.rm = T):max(infants_on_clusters[,i+1],na.rm = T)){

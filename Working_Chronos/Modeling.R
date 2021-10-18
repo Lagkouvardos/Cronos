@@ -654,9 +654,7 @@ break}
 time0 = unique(infants[!is.na(infants[,1]),1])
 sum(infants[!is.na(infants[,1]),1] == time0[1])
 
-#####################################################################################
-#####################################################################################
-#####################################################################################
+###################### Perform Chi-square analysis to check metadata influence on T0 #####################
 
 # Create a matrix to check for the effect of the metadata on the first timepoint (T0)
 chimatrix = matrix (NA, ncol = length(effectors)+1, nrow = nrow(infants))
@@ -705,10 +703,6 @@ Significant_metadata = Significant_metadata[2:length(Significant_metadata)]
 if (any(Significant_metadata)){
   Significant_metadata = colnames(meta_file)[3:ncol(meta_file)][Significant_metadata]
 }
-
-
-
-BIC_list
 
 ###########################################################################################################################################################
 ################################################ COMMENTS #################################################################################################

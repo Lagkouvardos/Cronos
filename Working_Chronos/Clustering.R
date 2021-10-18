@@ -118,7 +118,7 @@ colnames(samples_on_clusters)<- names(timepoint_list)
 BIC_list = list()
 
 # Setting the colour code for the exported plots
-xrwmata = c('violetred2','cyan3','orange2','yellowgreen','rosybrown','orchid4','salmon3','sienna1','saddlebrown','olivedrab4')
+xrwmata = c('saddlebrown','cyan3','olivedrab4','sienna1','orange2','yellowgreen','violetred2','rosybrown','orchid4','salmon3')
 
 
 # Calculate the UniFrac distance matrix for comparing microbial communities
@@ -194,10 +194,10 @@ for (name in names(timepoint_list)){
   #mclust::plot.densityMclust(x = kati)
   #####################################################################################################
   #####################################################################################################
-  clusttt = Mclust(data = as.dist(unifract_dist),G = c(1,max(samples_on_clusters[,name], na.rm = T)),  modelNames = c("EII","VII","EEI","EVI","VEI","VVI") , verbose = F)
+  gmm_testing = Mclust(data = as.dist(unifract_dist),G = c(1,max(samples_on_clusters[,name], na.rm = T)),  modelNames = c("EII","VII","EEI","EVI","VEI","VVI") , verbose = F)
   
-  BIC_list[[name]] = clusttt$BIC
-  if (clusttt$G == 1){
+  BIC_list[[name]] = gmm_testing$BIC
+  if (gmm_testing$G == 1){
     samples_on_clusters[,name] = rep(1,nrow(samples_on_clusters))
   }
   
