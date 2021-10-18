@@ -642,3 +642,81 @@ print ('_____________________________________________')
 
   
 
+chi_values = c()
+for (j in effectors){
+  for (state in unique(meta_file[,j])){
+  print (nrow(meta_file[meta_file[,'Timepoint']==1 & meta_file[,j]==state,]))
+  
+  break
+    }
+break}
+
+time0 = unique(infants[!is.na(infants[,1]),1])
+sum(infants[!is.na(infants[,1]),1] == time0[1])
+
+#####################################################################################
+#####################################################################################
+#####################################################################################
+
+# Create a matrix to check for the effect of the metadata on the first timepoint (T0)
+chimatrix = matrix (NA, ncol = length(effectors)+1, nrow = nrow(infants))
+
+# Assign the rownames to the matrix
+rownames(chimatrix) = rownames(infants)
+
+# Assign the values on the matrix
+chimatrix[,1] = infants[,1]
+
+for (chirow in rownames(infants)){
+
+  subTab = as.matrix(meta_file[meta_file[,'Sample']==chirow & meta_file[,'Timepoint']==1,3:ncol(meta_file)])
+  
+  if (length(subTab)){
+    chimatrix[chirow,2:ncol(chimatrix)] = subTab
+    }
+}
+chimatrix = chimatrix[complete.cases(chimatrix),]
+
+Nuniq = length(unique(chimatrix[,1]))
+
+Significant_metadata = c()
+for (metadatum in 2:ncol(chimatrix)){
+    
+  chi_square_value = 0
+  dof = 0
+    
+  for (secondstate in unique(chimatrix[,metadatum])){
+      
+    expected = sum(chimatrix[,metadatum]==secondstate) * (1/length(unique(chimatrix[,1])))
+    
+    for (firstcluster in unique(chimatrix[,1])){
+      dof = dof + 1
+      observed = sum(chimatrix[chimatrix[,metadatum]== secondstate,1]==firstcluster)
+      chi_square_value = chi_square_value + ((observed- expected)**2)/expected 
+    }
+  }
+  
+  Null_hypothesis = chi_square_value <= qchisq(.95, df = (dof-1),lower.tail = T)
+  Significant_metadata[metadatum] = Null_hypothesis
+}
+
+Significant_metadata = Significant_metadata[2:length(Significant_metadata)]
+
+if (any(Significant_metadata)){
+  Significant_metadata = colnames(meta_file)[3:ncol(meta_file)][Significant_metadata]
+}
+
+
+
+BIC_list
+
+###########################################################################################################################################################
+################################################ COMMENTS #################################################################################################
+###########################################################################################################################################################
+
+
+# We assume that the phylogenetic distance (as calculated by the Unifrac metric) of one sample to the rest follows a normal distribution between a cluster.
+# For an infinite numberof samples we can find at least one, the distances between which and all the others of the cluster follow a normal distribution.
+# Like the medoid or mean of the cluster. Based on that assumption we perform Gaussian Mixture Modeling to check whether the samples repressented here, 
+# form one or more clusters. We will use the log-likelihood estimation of the samples fitting one or the previously calculated optimal number of clusters
+# in order to validate the clustering. 

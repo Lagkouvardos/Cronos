@@ -111,10 +111,17 @@ samples_on_clusters<-matrix(0, ncol = length(timepoint_list), nrow= nrow(unique(
 row.names(samples_on_clusters)<- unique(meta_file[,'Sample'])
 colnames(samples_on_clusters)<- names(timepoint_list)
 
+
 ############ Clustering of samples on all timepoints ###############################
 
-# Calculate the UniFrac distance matrix for comparing microbial communities
+# Initialize a list to save Bayesian Information Criterion for all the timepoints 
+BIC_list = list()
 
+# Setting the colour code for the exported plots
+xrwmata = c('violetred2','cyan3','orange2','yellowgreen','rosybrown','orchid4','salmon3','sienna1','saddlebrown','olivedrab4')
+
+
+# Calculate the UniFrac distance matrix for comparing microbial communities
 for (name in names(timepoint_list)){
   unifracs <- GUniFrac(otu.tab = timepoint_list[[name]] ,tree = rooted_tree, alpha = c(0.0,0.5,1.0))$unifracs
   
@@ -122,7 +129,12 @@ for (name in names(timepoint_list)){
   unifract_dist <- unifracs[, , "d_0.5"]
   
   PAM_clustering <- function(unifract_dist,k){
-    return (pam(x = unifract_dist, k = k,diss = T)$clustering)
+
+    clusters = pam(x = unifract_dist, k = k,diss = T)$clustering
+    medoids = pam(x = unifract_dist, k = k,diss = T)$medoids
+    avg_width = pam(x = unifract_dist, k = k,diss = T)$silinfo$clus.avg.widths
+
+    return (list(clusters,medoids,avg_width))
   }
   
   
@@ -130,7 +142,10 @@ for (name in names(timepoint_list)){
     calinski_harabasz_values <-c()
   
     for (k in 2:9){
-      clusteringP <- PAM_clustering(unifract_dist = unifract_dist, k = k)
+      clustering_results = PAM_clustering(unifract_dist = unifract_dist, k = k)
+      clusteringP <- clustering_results[[1]]
+      medoids = clustering_results[[2]]
+      avg_width = clustering_results[[3]]
       calinski_harabasz_values= c(calinski_harabasz_values,(calinhara(x = unifract_dist,cn = k, clustering = clusteringP)))
     }
     
@@ -158,8 +173,10 @@ for (name in names(timepoint_list)){
   dev.off()
   
   # Perform clustering
-  clusters <- PAM_clustering(unifract_dist = unifract_dist ,k =best_k)
-  
+  clustering_results <- PAM_clustering(unifract_dist = unifract_dist ,k =best_k)
+  clusters = clustering_results[[1]]
+  medoids = clustering_results[[2]]
+  avg_width = clustering_results[[3]]
   # Assing the samples to the estimated clusters
   samples_on_clusters[meta_file[row.names(unifract_dist),'Sample'],name]<- clusters
   samples_on_clusters[samples_on_clusters==0] <- NA
@@ -167,8 +184,21 @@ for (name in names(timepoint_list)){
   # Export MDS plot of the samples on the timepoint
   scall <- cmdscale(d = unifract_dist,eig = F,k = 2)
   jpeg(filename = paste(dir_with_plots,paste('MDS Plot of',paste('Timepoint',name,sep=' '),sep = ' '),sep = '/'))
-  plot(scall , main = name)
+  plot(scall , main = name, col = xrwmata[clusters] , pch = clusters)
+  #plot (rnorm(mean = scall[medoids[1]],sd = avg_width[1])      ,x = scall[,1], y = scall[,2])
   dev.off()
   
+  ###################################################################################################
+  ###################################################################################################
+  #kati = mclust::densityMclust(data = scall[which(clusters ==1 )])
+  #mclust::plot.densityMclust(x = kati)
+  #####################################################################################################
+  #####################################################################################################
+  clusttt = Mclust(data = as.dist(unifract_dist),G = c(1,max(samples_on_clusters[,name], na.rm = T)),  modelNames = c("EII","VII","EEI","EVI","VEI","VVI") , verbose = F)
+  
+  BIC_list[[name]] = clusttt$BIC
+  if (clusttt$G == 1){
+    samples_on_clusters[,name] = rep(1,nrow(samples_on_clusters))
+  }
   
 }
