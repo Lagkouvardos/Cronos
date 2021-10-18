@@ -43,6 +43,14 @@ representation_method = 'median'
 
 # Please write the names of the 2 new directories, in which the output should be saved at:
 # Firstly, the one for the transition plots
-dir_with_plots= 'Plots'     # <---- CHANGE ACCORDINGLY
+dir_with_plots= 'Plots'                         # <---- CHANGE ACCORDINGLY
 # Secondly, the one with the files
-dir_with_files= 'Chronos_output_files' # <---- CHANGE ACCORDINGLY
+dir_with_files= 'Chronos_output_files'          # <---- CHANGE ACCORDINGLY
+
+
+# Please specify the number of iterations to use for the stratified test split on modeling.
+# Final Stratified accuaracies of the modeling will derive as the mean of accuracies from
+# the number selected. 
+# This number is strongly linked to the time Chronos will need to run.
+# Greater numbers lead to more time needed (default is 100)
+splitting_times = 20                           # <---- CHANGE ACCORDINGLY

@@ -62,7 +62,7 @@ LOO_multilogreg_Null <- function (infants,timepoint,end_timepoint,meta_file){
 
 # Calculate accuracy of prediction on final timepoint, as a mean of 100 accuracies with different
 # Train-Test stratified splits. Stratfication is performed on all metadata categories 
-multilogreg_stratified_Null <- function(infants,pososto,timepoint,end_timepoint,meta_file){
+multilogreg_stratified_Null <- function(infants,pososto,timepoint,end_timepoint,meta_file, splitting_times){
   
   logreg <- as.data.frame(matrix(NA,nrow = nrow(infants),ncol = 2))
   colnames(logreg)= c(paste('Cluster_at',end_timepoint,sep = '_'),timepoint)
@@ -76,7 +76,7 @@ multilogreg_stratified_Null <- function(infants,pososto,timepoint,end_timepoint,
   }
   logreg = logreg[complete.cases(logreg),]
   
-  train_index <- createDataPartition(y = logreg[,paste('Cluster_at',end_timepoint,sep = '_')], p = pososto, list = F, times = 100, groups = max(apply(X = logreg, MARGIN = 2, FUN = function(x){length(unique(x))})) )
+  train_index <- createDataPartition(y = logreg[,paste('Cluster_at',end_timepoint,sep = '_')], p = pososto, list = F, times = splitting_times, groups = max(apply(X = logreg, MARGIN = 2, FUN = function(x){length(unique(x))})) )
   
   acc <- c()
   tra <- c()
@@ -116,7 +116,7 @@ bestpososto <- function (infants){
   sepoiopososto <- c()
   for (poso in 65:90){
     poso = poso/100
-    telika <- multilogreg_stratified_Null(infants = infants, pososto = poso, timepoint = tail(timepoints_to_perform,1), end_timepoint = end_timepoint,meta_file = files)
+    telika <- multilogreg_stratified_Null(infants = infants, pososto = poso, timepoint = tail(timepoints_to_perform,1), end_timepoint = end_timepoint,meta_file = files,splitting_times = splitting_times)
     accteststr = telika[1]
     acctrainstr = telika[2]
     trainsd = telika[3]
@@ -150,7 +150,7 @@ for (timepoint in timepoints_to_perform){
   acctrain = c(acctrain,LOOTeliko[1])
   acctest = c(acctest,LOOTeliko[2])
   
-  Splitteliko <- multilogreg_stratified_Null(infants = infants, pososto = to_kalitero_pososto,timepoint =  timepoint,meta_file =  files, end_timepoint = end_timepoint)
+  Splitteliko <- multilogreg_stratified_Null(infants = infants, pososto = to_kalitero_pososto,timepoint =  timepoint,meta_file =  files, end_timepoint = end_timepoint,splitting_times = splitting_times)
   
   
   accteststr <- c(accteststr,Splitteliko[1])
@@ -237,7 +237,7 @@ for (Ncomb in 1: (ncol(meta_file)-3)){
       
       # Calculate accuracy of prediction on final timepoint, as a mean of 100 accuracies with different
       # Train-Test stratified splits. Stratfication is performed on all metadata categories 
-      multilogreg_stratified_One <- function(infants,pososto,timepoint,end_timepoint,meta_file,Ncomb){
+      multilogreg_stratified_One <- function(infants,pososto,timepoint,end_timepoint,meta_file,Ncomb,splitting_times){
         
         logreg <- as.data.frame(matrix(NA,nrow = nrow(infants),ncol = ncol(meta_file)))
         colnames(logreg)= c(paste('Cluster_at',end_timepoint,sep = '_'),timepoint,colnames(meta_file)[3:ncol(meta_file)])
@@ -264,7 +264,7 @@ for (Ncomb in 1: (ncol(meta_file)-3)){
         }
         logreg = logreg[complete.cases(logreg),]
         
-        train_index <- createDataPartition(y = logreg[,paste('Cluster_at',end_timepoint,sep = '_')], p = pososto, list = F, times = 100, groups = max(apply(X = logreg, MARGIN = 2, FUN = function(x){length(unique(x))})) )
+        train_index <- createDataPartition(y = logreg[,paste('Cluster_at',end_timepoint,sep = '_')], p = pososto, list = F, times = splitting_times, groups = max(apply(X = logreg, MARGIN = 2, FUN = function(x){length(unique(x))})) )
         
         acc <- c()
         tra <- c()
@@ -304,7 +304,7 @@ for (Ncomb in 1: (ncol(meta_file)-3)){
         sepoiopososto <- c()
         for (poso in 65:90){
           poso = poso/100
-          telika <- multilogreg_stratified_One(infants = infants, pososto = poso, timepoint = tail(timepoints_to_perform,1), end_timepoint = end_timepoint,meta_file = files,Ncomb = Ncomb)
+          telika <- multilogreg_stratified_One(infants = infants, pososto = poso, timepoint = tail(timepoints_to_perform,1), end_timepoint = end_timepoint,meta_file = files,Ncomb = Ncomb,splitting_times = splitting_times)
           accteststr = telika[1]
           acctrainstr = telika[2]
           trainsd = telika[3]
@@ -338,7 +338,7 @@ for (Ncomb in 1: (ncol(meta_file)-3)){
         acctrain = c(acctrain,LOOTeliko[1])
         acctest = c(acctest,LOOTeliko[2])
         
-        Splitteliko <- multilogreg_stratified_One(infants = infants, pososto = to_kalitero_pososto,timepoint =  timepoint,meta_file =  files, end_timepoint = end_timepoint, Ncomb = Ncomb)
+        Splitteliko <- multilogreg_stratified_One(infants = infants, pososto = to_kalitero_pososto,timepoint =  timepoint,meta_file =  files, end_timepoint = end_timepoint, Ncomb = Ncomb,splitting_times = splitting_times)
         
         
         accteststr <- c(accteststr,Splitteliko[1])
@@ -419,7 +419,7 @@ LOO_multilogreg <- function (infants,timepoint, end_timepoint){
 
 # Calculate accuracy of prediction on final timepoint, as a mean of 100 accuracies with different
 # Train-Test stratified splits. Stratfication is performed on all metadata categories 
-multilogreg_stratified <- function(infants,pososto,timepoint,times, end_timepoint){
+multilogreg_stratified <- function(infants,pososto,timepoint,times, end_timepoint,splitting_times){
   
   # Create the matrix with columns the state on the timepoint, the metadata and as a response the state on the last timepoint
   logreg <- as.data.frame(matrix(NA,nrow = nrow(infants),ncol = ncol(meta_file)))
@@ -437,7 +437,7 @@ multilogreg_stratified <- function(infants,pososto,timepoint,times, end_timepoin
   # Remove NAs
   logreg = logreg[complete.cases(logreg),]
   # Create different partitions to split train and test sets
-  train_index <- createDataPartition(y = logreg[,paste('Cluster_at',end_timepoint,sep = '_')], p = pososto, list = F, times = times, groups = max(apply(X = logreg, MARGIN = 2, FUN = function(x){length(unique(x))})) )
+  train_index <- createDataPartition(y = logreg[,paste('Cluster_at',end_timepoint,sep = '_')], p = pososto, list = F, times = splitting_times, groups = max(apply(X = logreg, MARGIN = 2, FUN = function(x){length(unique(x))})) )
   
   # Set the response variable
   fo = as.formula(paste(paste('Cluster_at',end_timepoint,sep = '_'),'~.',sep = ''))
@@ -485,7 +485,7 @@ bestpososto <- function (infants){
   sepoiopososto <- c()
   for (poso in 65:90){
     poso = poso/100
-    telika <- multilogreg_stratified(end_timepoint = end_timepoint,infants = infants, pososto = poso, timepoint = rev(colnames(infants))[2], times = 100)
+    telika <- multilogreg_stratified(end_timepoint = end_timepoint,infants = infants, pososto = poso, timepoint = rev(colnames(infants))[2], splitting_times = splitting_times)
     accteststr = telika[1]
     acctrainstr = telika[2]
     trainsd = telika[3]
@@ -522,7 +522,7 @@ for (timepoint in timepoints_to_perform){
   acctrain = c(acctrain,LOOTeliko[1])
   acctest = c(acctest,LOOTeliko[2])
   
-  Splitteliko <- multilogreg_stratified(infants, to_kalitero_pososto, timepoint, times = 100,end_timepoint = end_timepoint)
+  Splitteliko <- multilogreg_stratified(infants, to_kalitero_pososto, timepoint, times = 100,end_timepoint = end_timepoint,splitting_times = splitting_times)
   
   
   accteststr <- c(accteststr,Splitteliko[1])
@@ -631,29 +631,6 @@ for (i in 1:(length(TotimepointIndeces)-1)){
 
 write.csv(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(infants)[2:ncol(infants)])), c(rev(colnames(infants))[2:ncol(infants)]), sep = ' from Timepoint '),maxaccuracies,metadata,random_estimator[1:length(random_estimator)-1]),file = paste(dir_with_files,'Maximum_Accuracies_of_TrainSplits.csv',sep = '/'),row.names = F)
 
-
-print (' Analysis Completed ')
-print ('_____________________________________________')
-print ('Results are saved in the preselected folders ')
-print ('_____________________________________________')
-
-
-
-
-  
-
-chi_values = c()
-for (j in effectors){
-  for (state in unique(meta_file[,j])){
-  print (nrow(meta_file[meta_file[,'Timepoint']==1 & meta_file[,j]==state,]))
-  
-  break
-    }
-break}
-
-time0 = unique(infants[!is.na(infants[,1]),1])
-sum(infants[!is.na(infants[,1]),1] == time0[1])
-
 ###################### Perform Chi-square analysis to check metadata influence on T0 #####################
 
 # Create a matrix to check for the effect of the metadata on the first timepoint (T0)
@@ -704,12 +681,10 @@ if (any(Significant_metadata)){
   Significant_metadata = colnames(meta_file)[3:ncol(meta_file)][Significant_metadata]
 }
 
-###########################################################################################################################################################
-################################################ COMMENTS #################################################################################################
-###########################################################################################################################################################
 
-# We assume that the phylogenetic distance (as calculated by the Unifrac metric) of one sample to the rest follows a normal distribution between a cluster.
-# For an infinite numberof samples we can find at least one, the distances between which and all the others of the cluster follow a normal distribution.
-# Like the medoid or mean of the cluster. Based on that assumption we perform Gaussian Mixture Modeling to check whether the samples repressented here, 
-# form one or more clusters. We will use the log-likelihood estimation of the samples fitting one or the previously calculated optimal number of clusters
-# in order to validate the clustering. 
+
+
+print (' Analysis Completed ')
+print ('_____________________________________________')
+print ('Results are saved in the preselected folders ')
+print ('_____________________________________________')

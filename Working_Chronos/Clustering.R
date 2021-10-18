@@ -7,8 +7,6 @@ dir.create(dir_with_plots, showWarnings = F)
 
 
 ############################ Reading the files ###########################################
-
-
 meta_file <- read.table (file = input_meta, check.names = FALSE, header = TRUE, dec = ".", sep = ",", row.names = 1, comment.char = "", stringsAsFactors = F)
 # Clean table from empty lines
 meta_file <- data.frame(meta_file[!apply(is.na(meta_file) | meta_file=="",1,all),])
@@ -185,15 +183,10 @@ for (name in names(timepoint_list)){
   scall <- cmdscale(d = unifract_dist,eig = F,k = 2)
   jpeg(filename = paste(dir_with_plots,paste('MDS Plot of',paste('Timepoint',name,sep=' '),sep = ' '),sep = '/'))
   plot(scall , main = name, col = xrwmata[clusters] , pch = clusters)
-  #plot (rnorm(mean = scall[medoids[1]],sd = avg_width[1])      ,x = scall[,1], y = scall[,2])
   dev.off()
   
-  ###################################################################################################
-  ###################################################################################################
-  #kati = mclust::densityMclust(data = scall[which(clusters ==1 )])
-  #mclust::plot.densityMclust(x = kati)
-  #####################################################################################################
-  #####################################################################################################
+  #############Gaussian Mixture Model Based Test to evaluate whether the dataset forms groups ###############################################
+  
   gmm_testing = Mclust(data = as.dist(unifract_dist),G = c(1,max(samples_on_clusters[,name], na.rm = T)),  modelNames = c("EII","VII","EEI","EVI","VEI","VVI") , verbose = F)
   
   BIC_list[[name]] = gmm_testing$BIC
