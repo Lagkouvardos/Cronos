@@ -68,7 +68,7 @@ meta_file <- meta_file[rownames(otu_file),]
 
 ############ Checking for and installing packages ####################################
 
-packages <-c("ade4","dplyr","GUniFrac","phangorn","cluster","fpc","markovchain", 'spgs','caret','nnet','gtools') 
+packages <-c("ade4","dplyr","GUniFrac","phangorn","cluster","fpc","markovchain", 'spgs','caret','nnet','gtools', 'mclust') 
 # Function to check whether the package is installed
 InsPack <- function(pack)
 {
@@ -118,6 +118,9 @@ BIC_list = list()
 # Setting the colour code for the exported plots
 xrwmata = c('saddlebrown','cyan3','olivedrab4','sienna1','orange2','yellowgreen','violetred2','rosybrown','orchid4','salmon3')
 
+# Initialize a list to save the medoid information
+medoids = matrix(NA, nrow = 9, ncol = length(timepoint_list))
+colnames(medoids) = names(timepoint_list)
 
 # Calculate the UniFrac distance matrix for comparing microbial communities
 for (name in names(timepoint_list)){
@@ -173,7 +176,9 @@ for (name in names(timepoint_list)){
   # Perform clustering
   clustering_results <- PAM_clustering(unifract_dist = unifract_dist ,k =best_k)
   clusters = clustering_results[[1]]
-  medoids = clustering_results[[2]]
+  medoids_temp = rep(NA,9-length(clustering_results[[2]]))
+  medoids[,name] = c(clustering_results[[2]], medoids_temp)
+  #  medoids = c(medoids, clustering_results[[2]])
   avg_width = clustering_results[[3]]
   # Assing the samples to the estimated clusters
   samples_on_clusters[meta_file[row.names(unifract_dist),'Sample'],name]<- clusters

@@ -4,7 +4,6 @@
 
 source('Clustering.R')
 
-
 ############ Markovian property check ################################################
 
 state_calculator = function(infants,t0,t2){
@@ -109,21 +108,17 @@ taxa_per_cluster <- function(taxa_matrix,samples_on_clusters,timepoint_list, rep
       timiclj = samples_on_clusters[!is.na(samples_on_clusters[,i]),i]
       metatimepoint= meta_file[meta_file[,"Timepoint"]==i,]
       
-      if (representation_method == 'median'){
-        taxa_clusters[[paste(as.character(i),as.character(j),sep = ' cluster ')]]= as.matrix(apply(X = (taxa_matrix[rownames(metatimepoint[match(metatimepoint[,'Sample'],(as.vector(names(timiclj[timiclj==j]))),nomatch = F),]),]),MARGIN = 2,FUN = median))
-      }
+      taxa_clusters[[paste(as.character(i),as.character(j),sep = ' cluster ')]]= taxa_matrix[medoids[j,i],]
       
-      else if (representation_method == 'mean'){
-        taxa_clusters[[paste(as.character(i),as.character(j),sep = ' cluster ')]]= as.matrix(apply(X = (taxa_matrix[rownames(metatimepoint[match(metatimepoint[,'Sample'],(as.vector(names(timiclj[timiclj==j]))),nomatch = F),]),]),MARGIN = 2,FUN = mean))
-      }
     }
   }
   clustering_taxa <- matrix(0,  nrow = ncol(taxa_matrix), ncol = length(taxa_clusters))
   row.names(clustering_taxa)<- colnames(taxa_matrix)
   colnames(clustering_taxa)<- names(taxa_clusters)
+  
   for (i in colnames(clustering_taxa)){
     for (j in rownames(clustering_taxa)){
-      clustering_taxa[j,i] <- taxa_clusters[[i]][j,]
+      clustering_taxa[j,i] <- taxa_clusters[[i]][,j]
     }
   }
   return (clustering_taxa)

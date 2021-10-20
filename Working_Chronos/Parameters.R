@@ -4,15 +4,20 @@
 
 ########### PLEASE FOLLOW THE INSTRUCTIONS CAREFULLY #####################################
 
-#' Please set the directory of the script as the working folder (e.g D:/studyname/Data/Chronos/)
-#' Note: the path is denoted by forward slash "/"
-setwd("~/Working_Chronos/Chronos_almost")              #<--- CHANGE ACCORDINGLY !!!
+# Please set the directory of the script as the working folder (e.g D:/studyname/Data/Chronos/)
+# Note: the path is denoted by forward slash "/".
+working_directory = "~/Working_Chronos/Chronos_almost"  #<--- CHANGE ACCORDINGLY !!!
 
-#' Please give the file name of the normalized OTU-table without taxonomic classification
+# Here we set the working directory as you selected in order to find your files and R scripts
+# Please do not interfere with the next line
+setwd(working_directory)
+
+
+# Please give the file name of the normalized OTU-table without taxonomic classification
 input_otu = "SOTUs-Table.tab"           #<--- CHANGE ACCORDINGLY !!!
-#' Please give the name of the meta-file that contains individual sample information
+# Please give the name of the meta-file that contains individual sample information
 input_meta = "Mapping_File_Inf_St.csv"                #<--- CHANGE ACCORDINGLY !!!
-#' Please give the name of the phylogenetic tree constructed from the OTU sequences
+# Please give the name of the phylogenetic tree constructed from the OTU sequences
 input_tree = "SOTUs-NJTree.tre"         #<--- CHANGE ACCORDINGLY !!!
 
 # Please specify if the file contains both adult and infant data: 
@@ -54,3 +59,12 @@ dir_with_files= 'Chronos_output_files'          # <---- CHANGE ACCORDINGLY
 # This number is strongly linked to the time Chronos will need to run.
 # Greater numbers lead to more time needed (default is 100)
 splitting_times = 20                           # <---- CHANGE ACCORDINGLY
+
+########### Now that you selected the parameters you can save (Ctrl + S) and exit  #######
+
+
+##########################################################################################
+########################## COMMENTS ######################################################
+##########################################################################################
+
+# Rewrite the representation method to select the medoid of PAM clustering and return that.

@@ -1,6 +1,6 @@
 setwd('~/Working_Chronos/Chronos_almost/')
 ptm <- proc.time()
-source('Markov.R')
+source('Transition_Analysis.R')
 
 ###################### Initializing Lists to save metrics of modeling ############################
 # Initializing lists to write accuracies of models
