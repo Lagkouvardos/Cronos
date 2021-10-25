@@ -132,7 +132,7 @@ samples_on_clusters = samples_on_clusters[,c(as.character(sort(as.numeric(colnam
 
 infants<- samples_on_clusters[is.na(samples_on_clusters[,adult_timepoint_name]),1:ncol(samples_on_clusters)-1]
 
-############ Write comma delimited files with outputs ####################################
+############ Write comma delimited files with outputs   ####################################
 
 dir.create(dir_with_files, showWarnings = F)
 
@@ -153,4 +153,20 @@ for (j in 1:length(No_clusters_per_timepoint)){
 }
 rownames(matrix_of_transitions)= paste('From ', transition_names,sep = '')
 write.csv(x = matrix_of_transitions,file = paste(dir_with_files,'Transition_Matrix.csv',sep = '/') , row.names = T,col.names = paste('To '  , transition_names,sep = ''))
+
+
+
+############ Ploting the transitions ####################################
+
+g <- graph_from_adjacency_matrix(adjmatrix = matrix_of_transitions, weighted = T ,mode = 'directed' )
+
+graph.colours = c()
+Number_of_clusters = apply(infants,2,function(x){max(x, na.rm = T)})
+for (i in 1:ncol(infants)){
+    graph.colours = c(graph.colours,rep(i,Number_of_clusters[i]))
+}
+jpeg(filename = paste(dir_with_plots,'Transition_graph',sep = '/'))
+plot(x = g, vertex.color = xrwmata[graph.colours], vertex.shape = 'circle', layout= layout_as_tree ,edge.arrow.size = g[])
+legend("topleft", paste('Clusters at Timepoint',colnames(infants),sep = ' '), fill = xrwmata[1:ncol(infants)])
+dev.off()
 
