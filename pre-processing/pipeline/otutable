@@ -1,3 +1,0 @@
-#!/bin/bash
-$usearch -usearch_global ~/thesis/out/merged.fq -db ~/thesis/out/otus.fa \
--strand plus -id 0.97 -otutabout ~/thesis/out/otu-table.txt
