@@ -1,4 +1,5 @@
 
+![Cronos-logo-v2](https://user-images.githubusercontent.com/8244618/139041662-dc956016-54e9-41b9-bb80-caa91119220a.png)
 
 How to RUN Chronos
 
