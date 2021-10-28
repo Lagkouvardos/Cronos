@@ -45,7 +45,7 @@ taxonomic_level='Family'                          # <---- CHANGE ACCORDINGLY
 # This number is strongly linked to the time Chronos will need to run.
 # Greater numbers lead to more time needed (default is 10)
 # Must be over 1
-splitting_times = 2                           # <---- CHANGE ACCORDINGLY
+splitting_times = 3                           # <---- CHANGE ACCORDINGLY
 
 # Please select the action Cronos should do if the same parameters are already used for analysis before
 # It can be either 'Continue' or 'Stop'.
@@ -153,7 +153,7 @@ meta_file <- meta_file[rownames(otu_file),]
 
 ############ Checking for and installing packages ####################################
 
-packages <-c("ade4","dplyr","GUniFrac","phangorn","cluster","fpc","markovchain", 'spgs','caret','nnet','gtools', 'mclust','igraph') 
+packages <-c("ade4","dplyr","GUniFrac","phangorn","cluster","fpc","markovchain", 'spgs','caret','nnet','gtools', 'mclust','igraph', 'network') 
 # Function to check whether the package is installed
 InsPack <- function(pack)
 {
@@ -441,6 +441,12 @@ write.csv(x = matrix_of_transitions,file = paste(output_dir,'Transition_Matrix.c
 
 ############ Plotting the transitions ####################################
 
+# Selecting colours for the graph
+graph.colours = c()
+for (i in 1:ncol(dataset_full)){
+  graph.colours = c(graph.colours,rep(i,No_clusters_per_timepoint[i]))
+}
+
 # Specifying the cluster names that correspond to the timepoint and cluster.
 timepoints_and_clusters <- c()
 cluster_names <- c(1:max(dataset_full_on_clusters,na.rm = T))
@@ -459,10 +465,6 @@ dev.off()
 
 
 
-#graph.colours = c()
-#for (i in 1:ncol(dataset_full)){
-#  graph.colours = c(graph.colours,rep(i,No_clusters_per_timepoint[i]))
-#}
 #jpeg(filename = paste(output_dir,'Transition_graph.jpeg',sep = '/'))
 #plot(x = transition_graph, vertex.color = colours_ploting[graph.colours], vertex.shape = 'circle', layout= layout_as_tree ,edge.arrow.size = transition_graph[])
 #legend("topleft", paste('Clusters at Timepoint',colnames(dataset_full),sep = ' '), fill = colours_ploting[1:ncol(dataset_full)])
@@ -480,7 +482,10 @@ Train_sets_LOO <- c()
 Test_sets_LOO  <- c()
 Train_sets_stratified_split <- c()
 Test_sets_stratified_split  <- c()
-
+Train_LOO_overtime_accuracy <- c()
+Test_LOO_overtime_accuracy <- c()
+Train_stratified_overtime_accuracy <- c()
+Test_stratified_overtime_accuracy <- c()
 # Naming the effectors to be imputed on the model
 effectors = colnames(meta_file)[3:ncol(meta_file)]
 
@@ -496,7 +501,7 @@ for (end_timepoint in head(as.numeric(rev(colnames(dataset_full))),n = (ncol(dat
   ###################### Leave one out Null #######################################################
   
   # Calculate mean accuracy of prediction on final timepoint, via Leave One Out method of splitting Train-Test sets
-  LOO_multilogreg_Null <- function (dataset_full,timepoint,end_timepoint,meta_file){
+  LOO_multilogreg_Null <- function (dataset_full,timepoint,end_timepoint,meta_file,splitting_times){
     
     logreg <- as.data.frame(matrix(NA,nrow = nrow(dataset_full),ncol = 2))
     colnames(logreg)= c(paste('Cluster_at',end_timepoint,sep = '_'), timepoint)
@@ -514,19 +519,20 @@ for (end_timepoint in head(as.numeric(rev(colnames(dataset_full))),n = (ncol(dat
     acc <- c()
     tra <- c()
     form = as.formula(paste(paste('Cluster_at',end_timepoint,sep = '_'),'~.',sep = ''))
-    for (j in 1:nrow(logreg)){
-      trainset = logreg[1:nrow(logreg)!=j,]
-      testset = logreg[j,]
-      
-      prediction_model <- multinom(formula = form , data = trainset ,censored = T, model = T)
-      
-      training_set_accuracies <- prediction_model %>% predict(trainset)
-      test_set_predictions <- prediction_model %>% predict(testset)
-      acc[j] = (sum(test_set_predictions == testset[,1])/ nrow(testset)) *100
-      tra[j] = (sum(test_set_predictions == trainset[,1])/nrow(trainset))*100
-      
+    for (repeating_time in 1:splitting_times){
+      for (j in 1:nrow(logreg)){
+        trainset = logreg[1:nrow(logreg)!=j,]
+        testset = logreg[j,]
+        
+        prediction_model <- multinom(formula = form , data = trainset ,censored = T, model = T)
+        
+        training_set_accuracies <- prediction_model %>% predict(trainset)
+        test_set_predictions <- prediction_model %>% predict(testset)
+        acc[j] = (sum(test_set_predictions == testset[,1])/ nrow(testset)) *100
+        tra[j] = (sum(test_set_predictions == trainset[,1])/nrow(trainset))*100
+        
+      }
     }
-    
     return (c(mean(tra),mean(acc)))
   }
   
@@ -617,7 +623,7 @@ for (end_timepoint in head(as.numeric(rev(colnames(dataset_full))),n = (ncol(dat
   # Loop to create a model from every timepoint to the final timepoint as selected from the first loop
   for (timepoint in timepoints_to_perform){
     
-    LOOTeliko <- LOO_multilogreg_Null(dataset_full = dataset_full, timepoint = timepoint,end_timepoint = end_timepoint,meta_file = files)
+    LOOTeliko <- LOO_multilogreg_Null(dataset_full = dataset_full, timepoint = timepoint,end_timepoint = end_timepoint,meta_file = files, splitting_times = splitting_times)
     
     Train_set_LOO_accuracy = c(Train_set_LOO_accuracy,LOOTeliko[1])
     Test_set_LOO_accuracy = c(Test_set_LOO_accuracy,LOOTeliko[2])
@@ -654,7 +660,7 @@ for (end_timepoint in head(as.numeric(rev(colnames(dataset_full))),n = (ncol(dat
       ###################### Leave one out Combinations #######################################################
       
       # Calculate mean accuracy of prediction on final timepoint, via Leave One Out method of splitting Train-Test sets
-      LOO_multilogreg_One <- function (dataset_full,timepoint,end_timepoint,meta_file,Ncomb){
+      LOO_multilogreg_One <- function (dataset_full,timepoint,end_timepoint,meta_file,Ncomb, splitting_times){
         
         logreg <- as.data.frame(matrix(NA,nrow = nrow(dataset_full),ncol = ncol(meta_file)))
         colnames(logreg)= c(paste('Cluster_at',end_timepoint,sep = '_'), timepoint , colnames(meta_file)[3:ncol(meta_file)])
@@ -681,19 +687,20 @@ for (end_timepoint in head(as.numeric(rev(colnames(dataset_full))),n = (ncol(dat
         acc <- c()
         tra <- c()
         form = as.formula(paste(paste('Cluster_at',end_timepoint,sep = '_'),'~.',sep = ''))
-        for (j in 1:nrow(logreg)){
-          trainset = logreg[1:nrow(logreg)!=j,]
-          testset = logreg[j,]
-          
-          prediction_model <- multinom(formula = form , data = trainset ,censored = T, model = T)
-          
-          training_set_accuracies <- prediction_model %>% predict(trainset[,2:ncol(trainset)])
-          test_set_predictions <- prediction_model %>% predict(testset[,2:ncol(testset)])
-          acc[j] = (sum(test_set_predictions == testset[,1])/ nrow(testset)) *100
-          tra[j] = (sum(test_set_predictions == trainset[,1])/nrow(trainset))*100
-          
-        }
-        
+        for (repeat_time in 1:splitting_times){
+          for (j in 1:nrow(logreg)){
+            trainset = logreg[1:nrow(logreg)!=j,]
+            testset = logreg[j,]
+            
+            prediction_model <- multinom(formula = form , data = trainset ,censored = T, model = T)
+            
+            training_set_accuracies <- prediction_model %>% predict(trainset[,2:ncol(trainset)])
+            test_set_predictions <- prediction_model %>% predict(testset[,2:ncol(testset)])
+            acc[j] = (sum(test_set_predictions == testset[,1])/ nrow(testset)) *100
+            tra[j] = (sum(test_set_predictions == trainset[,1])/nrow(trainset))*100
+            
+          }
+        }        
         return (c(mean(tra),mean(acc)))
       }
       
@@ -797,7 +804,7 @@ for (end_timepoint in head(as.numeric(rev(colnames(dataset_full))),n = (ncol(dat
       # Loop to create a model from every timepoint to the final timepoint as selected from the first loop
       for (timepoint in timepoints_to_perform){
         
-        LOOTeliko <- LOO_multilogreg_One(dataset_full = dataset_full, timepoint = timepoint,end_timepoint = end_timepoint,meta_file = files,Ncomb = Ncomb)
+        LOOTeliko <- LOO_multilogreg_One(dataset_full = dataset_full, timepoint = timepoint,end_timepoint = end_timepoint,meta_file = files,Ncomb = Ncomb, splitting_times = splitting_times)
         
         Train_set_LOO_accuracy = c(Train_set_LOO_accuracy,LOOTeliko[1])
         Test_set_LOO_accuracy = c(Test_set_LOO_accuracy,LOOTeliko[2])
@@ -832,7 +839,7 @@ for (end_timepoint in head(as.numeric(rev(colnames(dataset_full))),n = (ncol(dat
   
   ###################### Leave one out All #######################################
   # Calculate mean accuracy of prediction on final timepoint, via Leave One Out method of splitting Train-Test sets
-  LOO_multilogreg <- function (dataset_full,timepoint, end_timepoint){
+  LOO_multilogreg <- function (dataset_full,timepoint, end_timepoint, splitting_times){
     
     
     # Create the matrix with columns the state on the timepoint, the metadata and as a response the state on the last timepoint
@@ -857,23 +864,25 @@ for (end_timepoint in head(as.numeric(rev(colnames(dataset_full))),n = (ncol(dat
     
     acc <- c()
     tra <- c()
-    for (j in 1:nrow(logreg)){
-      
-      # Setting training and test sets by leaving one out
-      trainset = logreg[1:nrow(logreg)!=j,]
-      testset = logreg[j,]
-      
-      # Train the model
-      prediction_model <- multinom(formula = fo , data = trainset ,censored = T, model = T)
-      
-      # Predict for trainset
-      training_set_accuracies <- prediction_model %>% predict(trainset)
-      # Predict for testset
-      test_set_predictions <- prediction_model %>% predict(testset)
-      # Calculate accuracies
-      acc[j] = (sum(test_set_predictions == testset[,1])/ nrow(testset)) *100
-      tra[j] = (sum(test_set_predictions == trainset[,1])/nrow(trainset))*100
-      
+    for (repeat_time in 1:splitting_times){
+      for (j in 1:nrow(logreg)){
+        
+        # Setting training and test sets by leaving one out
+        trainset = logreg[1:nrow(logreg)!=j,]
+        testset = logreg[j,]
+        
+        # Train the model
+        prediction_model <- multinom(formula = fo , data = trainset ,censored = T, model = T)
+        
+        # Predict for trainset
+        training_set_accuracies <- prediction_model %>% predict(trainset)
+        # Predict for testset
+        test_set_predictions <- prediction_model %>% predict(testset)
+        # Calculate accuracies
+        acc[j] = (sum(test_set_predictions == testset[,1])/ nrow(testset)) *100
+        tra[j] = (sum(test_set_predictions == trainset[,1])/nrow(trainset))*100
+        
+      }
     }
     
     return (c(mean(tra),mean(acc)))
@@ -981,7 +990,7 @@ for (end_timepoint in head(as.numeric(rev(colnames(dataset_full))),n = (ncol(dat
   for (timepoint in timepoints_to_perform){
     
     
-    LOOTeliko <- LOO_multilogreg(dataset_full = dataset_full, timepoint = timepoint,end_timepoint = end_timepoint)
+    LOOTeliko <- LOO_multilogreg(dataset_full = dataset_full, timepoint = timepoint,end_timepoint = end_timepoint, splitting_times = splitting_times)
     
     Train_set_LOO_accuracy = c(Train_set_LOO_accuracy,LOOTeliko[1])
     Test_set_LOO_accuracy = c(Test_set_LOO_accuracy,LOOTeliko[2])
@@ -1000,7 +1009,10 @@ for (end_timepoint in head(as.numeric(rev(colnames(dataset_full))),n = (ncol(dat
   Test_sets_LOO  = rbind (Test_sets_LOO,   c('All',rep(0,(ncol(dataset_full)-length(Test_set_LOO_accuracy)-1)),Test_set_LOO_accuracy))
   Test_sets_stratified_split  = rbind (Test_sets_stratified_split,   c('All',rep(0,(ncol(dataset_full)-length(Test_set_stratified_accuracy)-1)),Test_set_stratified_accuracy))
   Train_sets_stratified_split = rbind (Train_sets_stratified_split,  c('All',rep(0,(ncol(dataset_full)-length(Train_set_stratified_accuracy)-1)),Train_set_stratified_accuracy))
-  
+  Train_stratified_overtime_accuracy <- c(Train_set_stratified_accuracy,Train_stratified_overtime_accuracy)
+  Test_stratified_overtime_accuracy  <- c(Test_set_stratified_accuracy ,Test_stratified_overtime_accuracy)
+  Train_LOO_overtime_accuracy <- c(Train_set_LOO_accuracy,Train_LOO_overtime_accuracy)
+  Test_LOO_overtime_accuracy  <- c(Test_set_LOO_accuracy, Test_LOO_overtime_accuracy)
   ###################### Barplots of Accuracies ############################################
   jpeg(filename = paste(output_dir,paste(paste('Accuracies of Models on Timepoint', end_timepoint,sep = ' '),'jpeg', sep='.'),sep = '/'))
   barplot(rbind(Test_set_LOO_accuracy,Test_set_stratified_accuracy, Train_set_LOO_accuracy,Train_set_stratified_accuracy), beside = T, ylim = c(40,100), xpd = F ,names = timepoints_to_perform, col= c('paleturquoise4','paleturquoise3', 'darkolivegreen2', 'darkolivegreen3'))
@@ -1055,7 +1067,7 @@ for (i in 1:(length(TotimepointIndeces)-1)){
 }
 write.csv(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(dataset_full)[2:ncol(dataset_full)])), c(rev(colnames(dataset_full))[2:ncol(dataset_full)]), sep = ' from Timepoint '),maxaccuracies,metadata,random_estimator[1:length(random_estimator)-1]),file = paste(output_dir,'Maximum_Accuracies_of_Test_sets_LOO.csv',sep = '/'),row.names = F)
 
-###################### Write files of Best ,sep = '/')Accuracies TestSplits ########################################
+###################### Write files of Best Accuracies TestSplits ########################################
 
 maxaccuracies <- c()
 metadata <- c()
@@ -1158,3 +1170,5 @@ print ('_____________________________________________')
 } else {
   print (paste('Cronos has already run with the exact same parameters. The output files are stored in',sub(pattern = './',replacement = '',x = directory),sep = ' '))
 }
+
+Test_LOO_overtime_accuracy
