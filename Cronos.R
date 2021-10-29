@@ -8,11 +8,6 @@
 # Note: the path is denoted by forward slash "/".
 working_directory = "~/Working_Chronos/Cronos_Final/"  #<--- CHANGE ACCORDINGLY !!!
 
-# Here we set the working directory as you selected in order to find your files and R scripts
-# Please do not interfere with the next line
-
-setwd(working_directory)
-
 
 # Please give the file name of the normalized OTU-table without taxonomic classification
 input_otu = "SOTUs-Table.tab"           #<--- CHANGE ACCORDINGLY !!!
@@ -22,10 +17,12 @@ input_meta = "Mapping_File_Inf_St.csv"                #<--- CHANGE ACCORDINGLY !
 input_tree = "SOTUs-NJTree.tre"         #<--- CHANGE ACCORDINGLY !!!
 
 
-# Please specify if the file contains both adult and infant data:
-# If it contains adult data specify the name of the column (i.e. timepoint name) where they are saved
+# Please specify if the file contains external data. One example is when analyzing infant data
+# but have an OTU table for adults as well for a reference. 
+# If it contains external timepoint, please specify the name of the column 
+# (i.e. timepoint name) where they are saved
 # If it doesn't, leave it blank (like this: '' ).
-adult_timepoint_name = 'MM'              #<--- CHANGE ACCORDINGLY
+External_Reference_Point = 'MM'              #<--- CHANGE ACCORDINGLY
 
 
 # Please select the taxon in which the samples will be analyzed
@@ -58,6 +55,11 @@ action = 'Continue'                           # <---- CHANGE ACCORDINGLY
 ###################### PLEASE DO NOT CHANGE ANYTHING BEYOND THIS POINT ###################################################
 ##########################################################################################################################
 
+# Here we set the working directory as you selected in order to find your files and R scripts
+# Please do not interfere with the next line
+
+setwd(working_directory)
+
 ##########################################################################################################################
 #################################### CREATING OUTPUT DIRECTORY ###########################################################
 ##########################################################################################################################
@@ -66,8 +68,8 @@ action = 'Continue'                           # <---- CHANGE ACCORDINGLY
 output_dir = paste('Cronos',date(),sep =' ')
 # Create a log file with all the parameters used
 parameters = matrix('',ncol = 1 ,nrow = 6)
-rownames(parameters) = c('input_meta','input_tree','input_otu','taxonomic_level','adult_timepoint_name','splitting_times')
-parameters[,1]= c(input_meta,input_tree,input_otu,taxonomic_level,adult_timepoint_name,splitting_times)
+rownames(parameters) = c('input_meta','input_tree','input_otu','taxonomic_level','External_Reference_Point','splitting_times')
+parameters[,1]= c(input_meta,input_tree,input_otu,taxonomic_level,External_Reference_Point,splitting_times)
 
 # Checking whether Cronos was run before with the same parameters
 new_run = T
@@ -317,8 +319,8 @@ counting_states = function (dataset_full,t0,t2,states) {
   return (counter)
 }
 
-if (nchar(adult_timepoint_name)>0){
-  tps = as.character(sort(as.numeric(colnames(samples_on_clusters)[colnames(samples_on_clusters)!='ot' & colnames(samples_on_clusters)!=adult_timepoint_name]),decreasing = F))
+if (nchar(External_Reference_Point)>0){
+  tps = as.character(sort(as.numeric(colnames(samples_on_clusters)[colnames(samples_on_clusters)!='ot' & colnames(samples_on_clusters)!=External_Reference_Point]),decreasing = F))
 } else {
   tps = as.character(sort(as.numeric(colnames(samples_on_clusters[colnames(samples_on_clusters)!='ot'])),decreasing = F))
 }
@@ -414,10 +416,10 @@ taxa_per_cluster <- function(taxa_matrix,samples_on_clusters,timepoint_list, rep
 taxa_clusters <- taxa_per_cluster(taxa_matrix = taxa_matrix, samples_on_clusters = samples_on_clusters, timepoint_list = timepoint_list, representation_method = representation_method)
 
 samples_on_clusters = samples_on_clusters[,names(timepoint_list)[names(timepoint_list)!='ot']]
-samples_on_clusters = samples_on_clusters[,c(as.character(sort(as.numeric(colnames(samples_on_clusters)[colnames(samples_on_clusters)!=adult_timepoint_name]),decreasing = F,na.last = T)),adult_timepoint_name)]
+samples_on_clusters = samples_on_clusters[,c(as.character(sort(as.numeric(colnames(samples_on_clusters)[colnames(samples_on_clusters)!=External_Reference_Point]),decreasing = F,na.last = T)),External_Reference_Point)]
 
 
-dataset_full<- samples_on_clusters[is.na(samples_on_clusters[,adult_timepoint_name]),1:ncol(samples_on_clusters)-1]
+dataset_full<- samples_on_clusters[is.na(samples_on_clusters[,External_Reference_Point]),1:ncol(samples_on_clusters)-1]
 
 ############ Write comma delimited files with outputs   ####################################
 
