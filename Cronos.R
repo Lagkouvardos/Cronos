@@ -42,7 +42,7 @@ taxonomic_level='Family'                          # <---- CHANGE ACCORDINGLY
 # This number is strongly linked to the time Chronos will need to run.
 # Greater numbers lead to more time needed (default is 10)
 # Must be over 1
-splitting_times = 3                           # <---- CHANGE ACCORDINGLY
+splitting_times = 2                           # <---- CHANGE ACCORDINGLY
 
 # Please select the action Cronos should do if the same parameters are already used for analysis before
 # It can be either 'Continue' or 'Stop'.
@@ -560,7 +560,6 @@ for (end_timepoint in head(as.numeric(rev(colnames(dataset_full))),n = (ncol(dat
     
     acc <- c()
     tra <- c()
-    weighted_modeling_factors <- list()
     fo = as.formula(paste(paste('Cluster_at',end_timepoint,sep = '_'),'~.',sep = ''))
     for (j in 1:ncol(train_index)){
       trainset = logreg[train_index[,j],]
@@ -618,8 +617,7 @@ for (end_timepoint in head(as.numeric(rev(colnames(dataset_full))),n = (ncol(dat
   Train_set_stratified_accuracy <- c()
   trainsd <- c()
   testsd <- c()
-  weighted_modeling_factors <- list()
-  
+
   ###################### Calculate Accuracies on timepoints Null ############################
   
   # Loop to create a model from every timepoint to the final timepoint as selected from the first loop
@@ -741,7 +739,6 @@ for (end_timepoint in head(as.numeric(rev(colnames(dataset_full))),n = (ncol(dat
         
         acc <- c()
         tra <- c()
-        weighted_modeling_factors <- list()
         fo = as.formula(paste(paste('Cluster_at',end_timepoint,sep = '_'),'~.',sep = ''))
         for (j in 1:ncol(train_index)){
           trainset = logreg[train_index[,j],]
@@ -799,8 +796,7 @@ for (end_timepoint in head(as.numeric(rev(colnames(dataset_full))),n = (ncol(dat
       Train_set_stratified_accuracy <- c()
       trainsd <- c()
       testsd <- c()
-      weighted_modeling_factors <- list()
-      
+
       ###################### Calculate Accuracies on timepoints Combinations ############################
       
       # Loop to create a model from every timepoint to the final timepoint as selected from the first loop
@@ -919,7 +915,6 @@ for (end_timepoint in head(as.numeric(rev(colnames(dataset_full))),n = (ncol(dat
     
     acc <- c()
     tra <- c()
-    weighted_modeling_factors <- list()
     for (j in 1:ncol(train_index)){
       
       # Split train and test sets
@@ -984,8 +979,7 @@ for (end_timepoint in head(as.numeric(rev(colnames(dataset_full))),n = (ncol(dat
   Train_set_stratified_accuracy <- c()
   trainsd <- c()
   testsd <- c()
-  weighted_modeling_factors <- list()
-  
+
   
   ###################### Calculate Accuracies on timepoints All #################
   
@@ -1056,7 +1050,6 @@ write.table(x = Test_sets_stratified_split,  file = paste(output_dir,'All Accura
 ###################### Calculate random estimators performance ##########################################
 random_estimator = 100/rev(apply (X = dataset_full,MARGIN = 2,FUN = function(x){max(x,na.rm = T)}))
 ###################### Write files of Best Accuracies Test_sets_LOO ###########################################
-Test_sets_stratified_split
 
 TotimepointIndeces = c(0:ncol(Test_sets_LOO))*Npredictions
 maxaccuracies <- c()
@@ -1161,7 +1154,8 @@ if (any(Significant_metadata)){
 
 
 
-
+print (paste('The transitions among timepoints ',ifelse(test = Markovian_property, yes = 'are Markovian', no = 'are NOT Markovian'),sep = ' '))
+print (paste('For the clustering fate on the first timepoint', paste(ifelse(test = Significant_metadata, yes = Significant_metadata, no = 'No'), 'metadata are significant.', sep = ' '), sep = ' '))
 print (' Analysis Completed ')
 print ('_____________________________________________')
 print ('Results are saved in the preselected folders ')
@@ -1173,4 +1167,4 @@ print ('_____________________________________________')
   print (paste('Cronos has already run with the exact same parameters. The output files are stored in',sub(pattern = './',replacement = '',x = directory),sep = ' '))
 }
 
-Test_LOO_overtime_accuracy
+
