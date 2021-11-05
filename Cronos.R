@@ -65,7 +65,7 @@ setwd(working_directory)
 ##########################################################################################################################
 
 # Setting the name of the directory where Cronos outputs are stored 
-output_dir = paste('Cronos',date(),sep =' ')
+output_dir = paste('Cronos',date(),sep ='_')
 # Create a log file with all the parameters used
 parameters = matrix('',ncol = 1 ,nrow = 6)
 rownames(parameters) = c('input_meta','input_tree','input_otu','taxonomic_level','External_Reference_Point','splitting_times')
@@ -273,7 +273,7 @@ for (name in names(timepoint_list)){
   
   # Export MDS plot of the samples on the timepoint
   scall <- cmdscale(d = unifract_dist,eig = F,k = 2)
-  jpeg(filename = paste(output_dir,paste('MDS Plot of',paste('Timepoint.jpeg',name,sep=' '),sep = ' '),sep = '/'))
+  jpeg(filename = paste(output_dir,paste('MDS Plot of Timepoint', name,sep=' '),sep = '/'))
   plot(scall , main = name, col = colours_ploting[clusters] , pch = clusters)
   dev.off()
   
