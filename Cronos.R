@@ -65,7 +65,10 @@ setwd(working_directory)
 ##########################################################################################################################
 
 # Setting the name of the directory where Cronos outputs are stored 
-output_dir = paste('Cronos',date(),sep ='_')
+date_of_run = unlist(strsplit(as.character(date()), split = ' '))
+date_of_run = date_of_run[nchar(date_of_run)>0]  
+date_of_run = paste(date_of_run,collapse = '_')
+output_dir = paste('Cronos',date_of_run,sep ='_')
 # Create a log file with all the parameters used
 parameters = matrix('',ncol = 1 ,nrow = 6)
 rownames(parameters) = c('input_meta','input_tree','input_otu','taxonomic_level','External_Reference_Point','splitting_times')
