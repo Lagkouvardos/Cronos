@@ -68,6 +68,7 @@ setwd(working_directory)
 date_of_run = unlist(strsplit(as.character(date()), split = ' '))
 date_of_run = date_of_run[nchar(date_of_run)>0]  
 date_of_run = paste(date_of_run,collapse = '_')
+date_of_run= gsub(pattern = ':', replacement = '_', x = date_of_run)
 output_dir = paste('Cronos',date_of_run,sep ='_')
 # Create a log file with all the parameters used
 parameters = matrix('',ncol = 1 ,nrow = 6)
@@ -84,11 +85,10 @@ for (directory in list.dirs()[2:length(list.dirs())]){
   }
 }
 
-
 if (new_run==T || (new_run == F & action =='Continue')){
   
   # Create the directory where Cronos outputs will be stored
-  dir.create(output_dir,showWarnings = F)
+  dir.create(paste(working_directory,output_dir,sep = '/'),showWarnings = F)
   # Write file with the parameters on this run
   write.csv(x = parameters,file = paste(output_dir,'Cronos_log.csv',sep = '/') ,row.names = T, na = ' ')
   
@@ -1170,4 +1170,4 @@ print ('_____________________________________________')
   print (paste('Cronos has already run with the exact same parameters. The output files are stored in',sub(pattern = './',replacement = '',x = directory),sep = ' '))
 }
 
-
+matrix_of_transitions
