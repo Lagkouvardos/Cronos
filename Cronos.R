@@ -6,7 +6,7 @@
 
 # Please set the directory of the script as the working folder (e.g D:/studyname/Data/Chronos/)
 # Note: the path is denoted by forward slash "/".
-working_directory = "~/Working_Chronos/Cronos_Final/"  #<--- CHANGE ACCORDINGLY !!!
+working_directory = "~/Working_Chronos/Cronos_Final/" #<--- CHANGE ACCORDINGLY !!! 
 
 
 # Please give the file name of the normalized OTU-table without taxonomic classification
@@ -90,7 +90,10 @@ if (new_run==T || (new_run == F & action =='Continue')){
   # Create the directory where Cronos outputs will be stored
   dir.create(paste(working_directory,output_dir,sep = '/'),showWarnings = F)
   # Write file with the parameters on this run
-  write.csv(x = parameters,file = paste(output_dir,'Cronos_log.csv',sep = '/') ,row.names = T, na = ' ', sep = '\t')
+  
+  write.table(x = parameters,file = paste(output_dir,'Cronos_log.tab',sep = '/'), sep = "\t",col.names =F, row.names = TRUE,quote = FALSE)
+  
+  #write.csv(x = parameters,file = paste(output_dir,'Cronos_log.csv',sep = '/') ,row.names = T, na = ' ', sep = '\t')
   
   ##################################### SECTION ############################################################################
   #################################### CLUSTERING ##########################################################################
@@ -158,7 +161,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
   
   ############ Checking for and installing packages ####################################
   
-  packages <-c("ade4","dplyr","GUniFrac","phangorn","cluster","fpc","markovchain", 'spgs','caret','nnet','gtools', 'mclust','igraph', 'network','ggplot2','reshape2','easyalluvial') 
+  packages <-c("ade4","dplyr","GUniFrac","phangorn","cluster","fpc","markovchain", 'spgs','caret','nnet','gtools', 'mclust','igraph', 'network','ggplot2','reshape2','easyalluvial','ggrepel') 
   # Function to check whether the package is installed
   InsPack <- function(pack)
   {
@@ -208,9 +211,17 @@ if (new_run==T || (new_run == F & action =='Continue')){
   # Setting the colour code for the exported plots
   colours_ploting = c('saddlebrown','cyan3','olivedrab4','sienna1','orange2','yellowgreen','violetred2','rosybrown','orchid4','salmon3', colors())
   
+  
   # Initialize a list to save the medoid information
   medoids = matrix(NA, nrow = 9, ncol = length(timepoint_list))
   colnames(medoids) = names(timepoint_list)
+  
+  # Vectors to save medoid-relative information
+  medoids_plot <- c()
+  medoid_names <- c()
+  number_samples <- c()
+  time <- c()
+  clusters_medoids <- c()
   
   # Calculate the UniFrac distance matrix for comparing microbial communities
   for (name in names(timepoint_list)){
@@ -270,6 +281,29 @@ if (new_run==T || (new_run == F & action =='Continue')){
     clusters = clustering_results[[1]]
     medoids_temp = rep(NA,9-length(clustering_results[[2]]))
     medoids[,name] = c(clustering_results[[2]], medoids_temp)
+    
+    # Store the information about the medoids, the timepoints and the clusters
+    if (name!="ot"){
+      if (name!=External_Reference_Point){
+        medoids_plot = c(medoids_plot, clustering_results[[2]])
+        for (i in 1:best_k){
+          medoid_names <- c(medoid_names, paste0("TP:",name," Cl:",i))
+          number_samples <- c(number_samples,length(which(clusters==i))/length(clusters))
+          time <- c(time,name)
+          clusters_medoids <- c(clusters_medoids,paste("Cluster",i))
+        }
+      } else {
+        medoids_plot = c(medoids_plot, clustering_results[[2]])
+        for (i in 1:best_k){
+          medoid_names <- c(medoid_names, paste0(External_Reference_Point," Cl:",i))
+          number_samples <- c(number_samples,length(which(clusters==i))/length(clusters))
+          time <- c(time,name)
+          clusters_medoids <- c(clusters_medoids,paste("Cluster",i))
+          
+        }
+      }
+    }
+    
     #  medoids = c(medoids, clustering_results[[2]])
     avg_width = clustering_results[[3]]
     # Assing the samples to the estimated clusters
@@ -406,6 +440,29 @@ if (new_run==T || (new_run == F & action =='Continue')){
   
   
   
+  ######## Auxiliary Matrix necessary for the  Medoids MDS Plot ##########
+  
+  # Dataframe with the medoids
+  medoids_plot <- data.frame(medoid_names,medoids_plot,number_samples)
+  
+  # Calculate the distances between the medoids
+  unifracs_plot <- GUniFrac( otu_file[medoids_plot[,2],] ,tree = rooted_tree, alpha = c(0.0,0.5,1.0))$unifracs
+  
+  # Weight on abundant lineages so  the distance is not dominated by highly abundant lineages with 0.5 having the best power
+  unifract_dist_plot <- unifracs_plot[, , "d_0.5"]
+  
+  # Perform MDS scaling
+  mds<- cmdscale(unifract_dist_plot,eig=T, x.ret=T)
+  # Calculate the axes variance
+  mds.variation<- round(mds$eig/sum(mds$eig)*100,1) 
+  # Coordinates of the points
+  mds.points<- mds$points 
+  
+  # Dataframe with the coordinates and information about the medoids
+  mdsdata<- data.frame(Sample=rownames(mds.points),X=mds.points[,1] ,Y=mds.points[,2],Samples=number_samples,Points=medoid_names,Time=time, Clusters=clusters_medoids)
+  
+  
+  
   ######## Auxiliary Matrix necessary for the  Alluvial Plot ##########
   
   # Prepare the data for the alluvial plot
@@ -503,9 +560,37 @@ if (new_run==T || (new_run == F & action =='Continue')){
     }
   }
   
+  # Vectors with the initial and final positions of each timepoint (Transition matrix for the MDS0transition plot)
+  x_initial_mds <- c()
+  x_final_mds <- c()
+  y_initial_mds <- c()
+  y_final_mds <- c()
+  
+  for(i in 1:length(x_initial)) {
+    row <- which(mdsdata[,"Time"]==x_initial[i] & mdsdata[,"Clusters"]==y_initial[i])
+    row2 <- which(mdsdata[,"Time"]==x_final[i] & mdsdata[,"Clusters"]==y_final[i])
+    
+    x_initial_mds <- c(x_initial_mds,mdsdata[row,2])
+    y_initial_mds <- c(y_initial_mds,mdsdata[row,3])
+    x_final_mds <- c(x_final_mds,mdsdata[row2,2])
+    y_final_mds <- c(y_final_mds,mdsdata[row2,3])
+  }
+  
+  # An alternative transition matrix. This is necessary for the MDS-transition plot
+  mds_transition_matrix <- data.frame(x1 = x_initial_mds, x2=x_final_mds, y1 = y_initial_mds , y2 = y_final_mds)
+  
   # An alternative transition matrix. This is necessary for the bubble plot
   bubble_transition_matrix <- data.frame(x1 = x_initial, x2=x_final, y1 = y_initial , y2 = y_final)
   
+  # Convert Timepoints into factors
+  if (nchar(External_Reference_Point)>0) {  
+    mdsdata$Time <- factor(mdsdata$Time,levels=c(colnames(dataset_full_on_clusters),External_Reference_Point))
+  } else {
+    mdsdata$Time <- factor(mdsdata$Time,levels=colnames(dataset_full_on_clusters))
+  }
+  
+  # Colours of the MDS transition plot
+  mds_color <- colours_ploting[1:nlevels(as.factor(mdsdata$Time))]
   
   ############ Specify taxa on clusters #################################################
   
@@ -544,8 +629,12 @@ if (new_run==T || (new_run == F & action =='Continue')){
   
   colnames(taxa_clusters)<-lapply(X = colnames(taxa_clusters), FUN = function(x){paste('Timepoint',x,sep = ' ')})
   
-  write.csv(x = samples_on_clusters, file = paste(output_dir, "Samples_in_Timepoint-specific_Clusters.csv",sep = '/'), row.names = T, sep = '\t')
-  write.csv(x = taxa_clusters,       file = paste(output_dir, "Taxonomic_profile_of_clusters.csv", sep = '/'), row.names = T, sep = '\t')
+  write.table(x = samples_on_clusters, file = paste(output_dir, "Samples_in_Timepoint-specific_Clusters.tab",sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
+  write.table(x = taxa_clusters,       file = paste(output_dir, "Taxonomic_profile_of_clusters.tab", sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
+  
+  
+  #write.csv(x = samples_on_clusters, file = paste(output_dir, "Samples_in_Timepoint-specific_Clusters.csv",sep = '/'), row.names = T, sep = '\t')
+  #write.csv(x = taxa_clusters,       file = paste(output_dir, "Taxonomic_profile_of_clusters.csv", sep = '/'), row.names = T, sep = '\t')
   
   
   No_clusters_per_timepoint = apply(dataset_full, 2,function(x){max(x,na.rm = T)})
@@ -556,11 +645,17 @@ if (new_run==T || (new_run == F & action =='Continue')){
     }
   }
   rownames(matrix_of_transitions)= paste('From ', transition_names,sep = '')
-  write.csv(x = matrix_of_transitions,file = paste(output_dir,'Transition_Matrix.csv',sep = '/') , row.names = T, sep = '\t')
+  
+  write.table(x = matrix_of_transitions,file = paste(output_dir,'Transition_Matrix.tab',sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
+  
+  #write.csv(x = matrix_of_transitions,file = paste(output_dir,'Transition_Matrix.csv',sep = '/') , row.names = T, sep = '\t')
   
   
   
   ############ Plotting the transitions ####################################
+  
+  # Create a new directory where the transition plots will be placed
+  dir.create(paste(output_dir,"Transitions plots",sep = '/'),showWarnings = F)
   
   # Transition-Bubble Plot
   bubble_plot <- ggplot(samples_per_cluster, aes(y = Clusters, x = Timepoints)) + 
@@ -583,15 +678,14 @@ if (new_run==T || (new_run == F & action =='Continue')){
       legend.position = "right"
       ,plot.title = element_text(hjust = 0.5,size=20, face = "bold")) +
     ggtitle("Transition Plot")+
-    scale_fill_manual(values = c(rep("lavenderblush3",ncol(dataset_full_on_clusters))), guide = "none") 
+    scale_fill_manual(values = bubble_color, guide = "none") 
   
   
   # Print the transition-Bubble Plot 
-  suppressWarnings(ggsave(filename = paste(output_dir,'Transition Plot.pdf',sep = '/'),bubble_plot,width = 400,height=300,unit="mm"))
-  jpeg(filename = paste(output_dir,'Transition Plot.jpeg',sep = '/'),width = 1200 ,height=842)
+  suppressWarnings(ggsave(filename = paste(paste(output_dir,"Transitions plots",sep = '/'),'Transition Plot.pdf',sep = '/'),bubble_plot,width = 400,height=300,unit="mm"))
+  jpeg(filename = paste(paste(output_dir,"Transitions plots",sep = '/'),'Transition Plot.jpeg',sep = '/'),width = 1200 ,height=842)
   suppressWarnings(print(bubble_plot))
   dev.off()
-  
   
   
   # Alluvial-Flow Chart
@@ -604,47 +698,43 @@ if (new_run==T || (new_run == F & action =='Continue')){
           axis.ticks.y=element_blank())
   
   # Print the alluvial plot
-  ggsave(filename = paste(output_dir,'Alluvial Plot.pdf',sep = '/'),alluvial,width = 400,height=300,unit="mm")
-  jpeg(filename = paste(output_dir,'Alluvial Plot.jpeg',sep = '/'),width = 842 ,height=842)
+  ggsave(filename = paste(paste(output_dir,"Transitions plots",sep = '/'),'Alluvial Plot.pdf',sep = '/'),alluvial,width = 400,height=300,unit="mm")
+  jpeg(filename = paste(paste(output_dir,"Transitions plots",sep = '/'),'Alluvial Plot.jpeg',sep = '/'),width = 842 ,height=842)
   show(alluvial)
   dev.off()
   
   
-  
-  # # Selecting colours for the graph
-  # graph.colours = c()
-  # for (i in 1:ncol(dataset_full)){
-  #   graph.colours = c(graph.colours,rep(i,No_clusters_per_timepoint[i]))
-  # }
-  # 
-  # # Specifying the cluster names that correspond to the timepoint and cluster.
-  # timepoints_and_clusters <- c()
-  # cluster_names <- c(1:max(dataset_full_on_clusters,na.rm = T))
-  # for (timepoint_ in colnames(dataset_full)){
-  #   
-  #   timepoints_and_clusters = c(timepoints_and_clusters,paste(paste('Timepoint', timepoint_, sep = ' '),as.character(unique(dataset_full[!is.na(dataset_full[,timepoint_]),timepoint_])), sep = ' Cluster '))
-  # }
-  # 
-  # network_of_transitions = as.network.matrix(x = matrix_of_transitions, matrix.type = 'adjacency', directed = T, hyper = F,loops = F,multiple = F)
-  # 
-  # jpeg(filename = paste(output_dir, 'Transition_graph.jpeg',sep = '/'))
-  # corresponding_clusters <- apply(X = cbind(cluster_names,timepoints_and_clusters), MARGIN = 1, paste, collapse = '-> ')
-  # plot.network.default(x = network_of_transitions ,usearrows = T, displayisolates = T, interactive = F, displaylabels = T, boxed.labels = F,object.scale = .025 ,label.col = colours_ploting[graph.colours],   vertex.col = colours_ploting[graph.colours],  uselen = F, suppress.axes = T)
-  # legend("topright", corresponding_clusters, cex = 0.5)
-  # dev.off()
-  # 
+  # Medoids MDS Plot
+  medoids_mds <-  ggplot(mdsdata,aes(x=X,y=Y))+
+    geom_segment(aes(x = x1, y = y1, xend = x2, yend = y2,color=transitions), data = mds_transition_matrix,arrow = arrow(length = unit(0.02, "npc")),size=transitions*2)+
+    scale_color_gradient(low = "grey90", high = "black", n.breaks=5)+
+    scale_size_continuous(limits = c(0.000001, 1), range = c(1,20), breaks = c(seq(0.000001,1+0.000001,by=0.01))) +
+    geom_point(aes(size = Samples,fill=Time),shape=21,alpha=0.4,show.legend = F)+
+    geom_text_repel(aes(label=Points),size=4)+
+    xlab(paste("MDS1:",mds.variation[1],"%"))+
+    ylab(paste("MDS2:",mds.variation[2],"%"))+
+    ggtitle("Timepoints Medoids")+
+    coord_fixed()+
+    theme_bw()+
+    theme(plot.title = element_text(hjust = 0.5))+
+    scale_fill_manual(values = mds_color, guide = "none") 
   
   
-  #jpeg(filename = paste(output_dir,'Transition_graph.jpeg',sep = '/'))
-  #plot(x = transition_graph, vertex.color = colours_ploting[graph.colours], vertex.shape = 'circle', layout= layout_as_tree ,edge.arrow.size = transition_graph[])
-  #legend("topleft", paste('Clusters at Timepoint',colnames(dataset_full),sep = ' '), fill = colours_ploting[1:ncol(dataset_full)])
-  #dev.off()
-  
+  # Print the medoids_mds
+  ggsave(filename = paste(paste(output_dir,"Transitions plots",sep = '/'),'Medoids MDS Plot.pdf',sep = '/'),medoids_mds,width = 500,height=300,unit="mm")
+  jpeg(filename = paste(paste(output_dir,"Transitions plots",sep = '/'),'Medoids MDS Plot.jpeg',sep = '/'),width = 1200 ,height=842)
+  show(medoids_mds)
+  dev.off()
   
   ##################################### SECTION ############################################################################
   #################################### MODELING ############################################################################
   ##########################################################################################################################
   
+  heatmap_matrix_LOO <- data.frame(matrix(NA,nrow = ncol(dataset_full_on_clusters), ncol=ncol(dataset_full_on_clusters)))
+  diag(heatmap_matrix_LOO) <- 100
+  
+  heatmap_matrix_statified <- data.frame(matrix(NA,nrow = ncol(dataset_full_on_clusters), ncol=ncol(dataset_full_on_clusters)))
+  diag(heatmap_matrix_statified) <- 100
   
   ###################### Initializing Lists to save metrics of modeling ############################
   # Initializing lists to write accuracies of models
@@ -787,6 +877,8 @@ if (new_run==T || (new_run == F & action =='Continue')){
     testsd <- c()
     
     ###################### Calculate Accuracies on timepoints Null ############################
+    
+    
     
     # Loop to create a model from every timepoint to the final timepoint as selected from the first loop
     for (timepoint in timepoints_to_perform){
@@ -1177,44 +1269,71 @@ if (new_run==T || (new_run == F & action =='Continue')){
     Test_stratified_overtime_accuracy  <- c(Test_set_stratified_accuracy ,Test_stratified_overtime_accuracy)
     Train_LOO_overtime_accuracy <- c(Train_set_LOO_accuracy,Train_LOO_overtime_accuracy)
     Test_LOO_overtime_accuracy  <- c(Test_set_LOO_accuracy, Test_LOO_overtime_accuracy)
-    ###################### Barplots of Accuracies ############################################
     
-    # Formation of the Accuracies matrix 
-    temp_df <- data.frame(rbind(Test_set_LOO_accuracy,Test_set_stratified_accuracy, Train_set_LOO_accuracy,Train_set_stratified_accuracy))
-    temp_df <- data.frame(rownames(temp_df),temp_df)
-    colnames(temp_df) <- c("rows",timepoints_to_perform)
+    # Save the accuracies in the heatmap matrix
+    heatmap_matrix_statified[(length(Test_set_stratified_accuracy)+1),c(1:length(Test_set_stratified_accuracy))] <- Test_set_stratified_accuracy
     
-    # Unpivot temp_df from wide to long format using the row names as the identifier
-    temp_df <-  data.frame(melt(temp_df, cols = 2:ncol(temp_df),id.vars ="rows"))
-    colnames(temp_df) <- c("Clusters","Timepoints","Percentages")
-    
-    # Convert Timepoints and Cluster columns into factors
-    temp_df[,"Clusters"] <- factor(temp_df[,"Clusters"],levels = unique(temp_df[,"Clusters"]))
-    temp_df[,"Timepoints"] <- factor( temp_df[,"Timepoints"], levels=rev(timepoints_to_perform))
-    
-    # Create a vector with the colours for the barplot
-    color <-colours_ploting[1:nlevels(as.factor(temp_df[,"Clusters"]))]
-    
-    # Barplot of the Accuracies
-    barplot <-  ggplot(data=temp_df, aes(x=Timepoints, y=Percentages, fill= Clusters)) +
-      geom_bar(stat="identity", position=position_dodge())+
-      ylab("Percentage (%)")+
-      ggtitle("Title??")+ # <--------- Change the title of the plot
-      scale_fill_manual(breaks=c(levels(factor(temp_df[,"Clusters"],levels = unique(temp_df[,"Clusters"])))), values=color)+
-      guides(fill=guide_legend(title="Title??"))+ # <--------- Change the title of the legend
-      geom_hline(yintercept =40, linetype = "dashed")+
-      theme_classic()+
-      theme(legend.title.align = 0.5,plot.title = element_text(hjust = 0.5))
-    
-    dir.create(paste(output_dir,"Accuracies",sep = '/'),showWarnings = F)
-    
-    # Print the barplots
-    ggsave(paste(paste(output_dir,"Accuracies",sep = '/'),paste(paste('Accuracies of Models on Timepoint', end_timepoint,sep = ' '),'pdf', sep='.'),sep = '/'),barplot)
-    jpeg(filename = paste(paste(output_dir,"Accuracies",sep = '/'),paste(paste('Accuracies of Models on Timepoint', end_timepoint,sep = ' '),'jpeg', sep='.'),sep = '/'))
-    print(barplot)
-    dev.off()
-    
+    heatmap_matrix_LOO[(length(Test_set_stratified_accuracy)+1),c(1:length(Test_set_stratified_accuracy))] <- Test_set_LOO_accuracy
   }
+  
+  ###################### Heatmap of Accuracies ############################################
+  
+  # Create a directory wherre the acuuracy related files will be placed
+  dir.create(paste(output_dir,"Accuracies",sep = '/'),showWarnings = F)
+  
+  # Function for the Heatmaps
+  heatmap <- function (heatmap_matrix,category) {
+    # Name the rows and columns of the heatmap matrix
+    rownames(heatmap_matrix) <- colnames(dataset_full_on_clusters)
+    colnames(heatmap_matrix) <- colnames(dataset_full_on_clusters)
+    
+    # Unpivot heatmap_matrix from wide to long format using the rownames as the identifier
+    heatmap_matrix <- t(heatmap_matrix)
+    heatmap_matrix <- data.frame(rownames(heatmap_matrix),heatmap_matrix)
+    colnames(heatmap_matrix)[2:ncol(heatmap_matrix)] <- colnames(dataset_full_on_clusters)
+    melted_heatmap <- melt(heatmap_matrix, na.rm = TRUE)
+    colnames(melted_heatmap) <- c("X","Y","Value")
+    
+    # Convert X and Y columns into factors
+    melted_heatmap[,"X"] <- factor( melted_heatmap[,"X"] , levels=colnames(dataset_full_on_clusters))
+    melted_heatmap[,"Y"] <- factor( melted_heatmap[,"Y"] , levels=colnames(dataset_full_on_clusters))
+    
+    # Heatmap
+    heatmap_plot <-  ggplot(data = melted_heatmap, aes(X, Y, fill = Value))+
+      geom_tile(color = "white")+
+      scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 50, limit = c(0,100), space = "Lab", name="Accuracy") +
+      theme_minimal()+
+      ylab("Timepoints")+
+      xlab("Timepoints")+
+      coord_fixed()+
+      geom_text(aes(X, Y, label = round(Value,2)), color = "black", size = 4) +
+      theme(plot.title = element_text(hjust = 0.5,size=20, face = "bold"),
+            legend.box.just = "left",
+            axis.text.x = element_text(size = 12, face = "bold"),
+            axis.text.y = element_text(size = 12, face = "bold"),
+            panel.grid.major = element_blank(),
+            panel.border = element_blank(),
+            panel.background = element_blank(),
+            axis.ticks = element_blank(),
+            legend.justification = c(0, 1),
+            legend.position = c(0.7, 0.3),
+            legend.direction = "horizontal")+
+      guides(fill = guide_colorbar(barwidth = 7, barheight = 1, title.position = "top", title.hjust = 0.5))+
+      ggtitle(paste0("Heatmap of Accuracies (",category,")"))
+    
+    # Print the heatmap
+    ggsave(paste(paste(output_dir,"Accuracies",sep = '/'),paste0('Heatmap(',category,').pdf'),sep = '/'),heatmap_plot)
+    jpeg(filename = paste(paste(output_dir,"Accuracies",sep = '/'),paste0('Heatmap(',category,').jpeg'),sep = '/'))
+    print(heatmap_plot)
+    dev.off()
+  }
+  
+  # Print the LOO heatmap 
+  heatmap(heatmap_matrix_LOO,"LOO")
+  
+  # Print the stratified Split heatmap 
+  heatmap(heatmap_matrix_statified,"Stratified Split")
+  
   
   ###################### Calculate all possible combinations of metadata calculated ##########################
   Npredictions = 0
@@ -1237,11 +1356,100 @@ if (new_run==T || (new_run == F & action =='Continue')){
   colnames(Test_sets_LOO)  = c(paste('From timepoint ',rev(colnames(dataset_full)[1:ncol(dataset_full)-1]),sep = ''))
   colnames(Train_sets_stratified_split) = c(paste('From timepoint ',rev(colnames(dataset_full)[1:ncol(dataset_full)-1]),sep = ''))
   colnames(Test_sets_stratified_split)  = c(paste('From timepoint ',rev(colnames(dataset_full)[1:ncol(dataset_full)-1]),sep = ''))
-  write.table(x = Train_sets_LOO, file = paste(output_dir,'All Accuracies of Training Sets LOO.csv', sep = '/') , col.names = F ,row.names = T, sep = '\t')
-  write.table(x = Test_sets_LOO,  file = paste(output_dir,'All Accuracies of Test Sets LOO.csv',     sep = '/') , col.names = F,row.names = T, sep = '\t')
-  write.table(x = Train_sets_stratified_split, file = paste(output_dir,'All Accuracies of Training Sets Splitted.csv', sep = '/') , col.names = F, row.names = T, sep = '\t')
-  write.table(x = Test_sets_stratified_split,  file = paste(output_dir,'All Accuracies of Test Sets Splitted.csv', sep = '/')  , col.names = F,row.names = T, sep = '\t')
+  write.table(x = Train_sets_LOO, file = paste(output_dir,'All Accuracies of Training Sets LOO.tab', sep = '/') , sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
+  write.table(x = Test_sets_LOO,  file = paste(output_dir,'All Accuracies of Test Sets LOO.tab',     sep = '/') , sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
+  write.table(x = Train_sets_stratified_split, file = paste(output_dir,'All Accuracies of Training Sets Splitted.tab', sep = '/') , sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
+  write.table(x = Test_sets_stratified_split,  file = paste(output_dir,'All Accuracies of Test Sets Splitted.tab', sep = '/')  , sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
   
+  
+  ###################### Barplots of Accuracies ############################################
+  
+  # Counting indices
+  row <- 1 ; coloumn <- 0
+  
+  
+  # Calculate the maximum accuracy for every timepoint
+  for (x in 1:ncol(Train_sets_LOO)){
+    
+    # Vector with the maximum accuracies and the metadata
+    max_Train_sets_LOO <- c()
+    meta_Train_sets_LOO <- c()
+    max_Test_sets_LOO <- c()
+    meta_Test_sets_LOO <- c()
+    max_Train_sets_stratified_split <- c()
+    meta_Train_sets_stratified_split <- c()
+    max_Test_sets_stratified_split <- c()
+    meta_Test_sets_stratified_split <- c()
+    
+    for (y in 1:ncol(Train_sets_LOO)){
+      if ((coloumn+y) <= ncol(Train_sets_LOO)){
+        max_Train_sets_LOO <- c( max_Train_sets_LOO, max(as.numeric(Train_sets_LOO[row:Npredictions,coloumn+y])))
+        meta_Train_sets_LOO <- c(meta_Train_sets_LOO, names(which(Train_sets_LOO[row:Npredictions,coloumn+y]== as.character(max(as.numeric(Train_sets_LOO[row:Npredictions,coloumn+y]))))[1]))
+        max_Test_sets_LOO <- c( max_Test_sets_LOO,max(as.numeric(Test_sets_LOO[row:Npredictions,coloumn+y])))
+        meta_Test_sets_LOO <- c(meta_Test_sets_LOO, names(which(Test_sets_LOO[row:Npredictions,coloumn+y]== as.character(max(as.numeric(Test_sets_LOO[row:Npredictions,coloumn+y]))))[1]))
+        max_Train_sets_stratified_split <- c( max_Train_sets_stratified_split, max(as.numeric(Train_sets_stratified_split[row:Npredictions,coloumn+y])))
+        meta_Train_sets_stratified_split<- c(meta_Train_sets_stratified_split, names(which(Train_sets_stratified_split[row:Npredictions,coloumn+y]== as.character(max(as.numeric(Train_sets_stratified_split[row:Npredictions,coloumn+y]))))[1]))
+        max_Test_sets_stratified_split <- c( max_Test_sets_stratified_split, max(as.numeric(Test_sets_stratified_split[row:Npredictions,coloumn+y])))
+        meta_Test_sets_stratified_split <- c(meta_Test_sets_stratified_split, names(which(Test_sets_stratified_split[row:Npredictions,coloumn+y]== as.character( max(as.numeric(Test_sets_stratified_split[row:Npredictions,coloumn+y]))))[1]))
+      }
+    }
+    
+    # Formation of the metadata matrix 
+    temp_df_meta <- data.frame(rbind(meta_Test_sets_LOO,meta_Test_sets_stratified_split, meta_Train_sets_LOO,meta_Train_sets_stratified_split))
+    temp_df_meta <- data.frame(c("Test_sets_LOO","Test_sets_stratified_split","Train_sets_LOO","Train_sets_stratified_split"),temp_df_meta)
+    colnames(temp_df_meta) <- c("rows",colnames(dataset_full_on_clusters)[1:(ncol(Train_sets_LOO)-coloumn)])
+    
+    # Unpivot temp_df_meta from wide to long format using the row names as the identifier
+    temp_df_meta <-  data.frame(melt(temp_df_meta, cols = 2:ncol(temp_df_meta),id.vars ="rows"))
+    colnames(temp_df_meta) <- c("Clusters","Timepoints","Percentages")
+    
+    # Convert Timepoints and Cluster columns into factors
+    temp_df_meta[,"Clusters"] <- factor(temp_df_meta[,"Clusters"],levels = unique(temp_df_meta[,"Clusters"]))
+    temp_df_meta[,"Timepoints"] <- factor( temp_df_meta[,"Timepoints"], levels=colnames(dataset_full_on_clusters)[1:(ncol(Train_sets_LOO)-coloumn)])
+    
+    
+    # Formation of the accuracies matrix 
+    temp_df <- data.frame(rbind(max_Test_sets_LOO,max_Test_sets_stratified_split, max_Train_sets_LOO,max_Train_sets_stratified_split))
+    temp_df <- data.frame(c("Test_sets_LOO","Test_sets_stratified_split","Train_sets_LOO","Train_sets_stratified_split"),temp_df)
+    colnames(temp_df) <- c("rows",colnames(dataset_full_on_clusters)[1:(ncol(Train_sets_LOO)-coloumn)])
+    
+    # Unpivot temp_df from wide to long format using the row names as the identifier
+    temp_df <-  data.frame(melt(temp_df, cols = 2:ncol(temp_df),id.vars ="rows"))
+    colnames(temp_df) <- c("Clusters","Timepoints","Percentages")
+    
+    # Convert Timepoints and Cluster columns into factors
+    temp_df[,"Clusters"] <- factor(temp_df[,"Clusters"],levels = unique(temp_df[,"Clusters"]))
+    temp_df[,"Timepoints"] <- factor( temp_df[,"Timepoints"], levels=colnames(dataset_full_on_clusters)[1:(ncol(Train_sets_LOO)-coloumn)])
+    temp_df <- data.frame(temp_df, meta=as.factor(temp_df_meta[,3]))
+    
+    # Create a vector with the colours for the barplot
+    color <-colours_ploting[1:nlevels(as.factor(temp_df[,"Clusters"]))]
+    
+    # Barplot of the Accuracies
+    barplot <-  ggplot(data=temp_df, aes(x=Timepoints, y=Percentages)) +
+      geom_bar(aes(fill= Clusters),stat="identity", position="dodge",alpha=0.7)+
+      geom_text(aes(x=Timepoints, y=Percentages,label=meta, group = Clusters),position = position_dodge(width = .9),angle=90,hjust=2.5)+
+      ylab("Acurracy")+
+      ggtitle(paste("Accuracy achieved on Timepoint:",rev(colnames(dataset_full_on_clusters))[x]))+ 
+      scale_fill_manual(breaks=c(levels(factor(temp_df[,"Clusters"],levels = unique(temp_df[,"Clusters"])))), values=color)+
+      guides(fill=guide_legend(title=""))+ 
+      geom_hline(yintercept = (1/nlevels(as.factor(dataset_full_on_clusters[,rev(colnames(dataset_full_on_clusters))[x]])))*100, linetype = "dashed")+
+      theme_classic()+
+      theme(legend.title.align = 0.5,plot.title = element_text(hjust = 0.5))+
+      scale_fill_manual(values = c('paleturquoise4','paleturquoise3', 'darkolivegreen2', 'darkolivegreen3'),guide="none")
+    
+    # Calculate the initial line for the next iteration
+    row <- row+Npredictions
+    # Calculate the initial column for the next iteration
+    coloumn=coloumn+1
+    
+    # Print the barplots
+    ggsave(paste(paste(output_dir,"Accuracies",sep = '/'),paste(paste('Accuracies of Models on Timepoint', rev(colnames(dataset_full_on_clusters))[coloumn],sep = ' '),'pdf', sep='.'),sep = '/'),barplot)
+    jpeg(filename = paste(paste(output_dir,"Accuracies",sep = '/'),paste(paste('Accuracies of Models on Timepoint', rev(colnames(dataset_full_on_clusters))[coloumn],sep = ' '),'jpeg', sep='.'),sep = '/'))
+    print(barplot)
+    dev.off()
+    
+  }
   
   ###################### Calculate random estimators performance ##########################################
   random_estimator = 100/rev(apply (X = dataset_full,MARGIN = 2,FUN = function(x){max(x,na.rm = T)}))
@@ -1256,7 +1464,10 @@ if (new_run==T || (new_run == F & action =='Continue')){
     metadata[i] = rownames(Test_sets_LOO)[which.max(Test_sets_LOO[TotimepointIndeces[i]:TotimepointIndeces[i+1],i])]
     
   }
-  write.csv(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(dataset_full)[2:ncol(dataset_full)])), c(rev(colnames(dataset_full))[2:ncol(dataset_full)]), sep = ' from Timepoint '),maxaccuracies,metadata,random_estimator[1:length(random_estimator)-1]),file = paste(output_dir,'Maximum_Accuracies_of_Test_sets_LOO.csv',sep = '/'),row.names = F, sep = '\t')
+  write.table(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(dataset_full)[2:ncol(dataset_full)])), c(rev(colnames(dataset_full))[2:ncol(dataset_full)]), sep = ' from Timepoint '),maxaccuracies,metadata,random_estimator[1:length(random_estimator)-1]),
+              file = paste(output_dir,'Maximum_Accuracies_of_Test_sets_LOO.tab',sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
+  
+  # write.csv(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(dataset_full)[2:ncol(dataset_full)])), c(rev(colnames(dataset_full))[2:ncol(dataset_full)]), sep = ' from Timepoint '),maxaccuracies,metadata,random_estimator[1:length(random_estimator)-1]),file = paste(output_dir,'Maximum_Accuracies_of_Test_sets_LOO.csv',sep = '/'),row.names = F, sep = '\t')
   
   ###################### Write files of Best Accuracies TestSplits ########################################
   
@@ -1268,8 +1479,11 @@ if (new_run==T || (new_run == F & action =='Continue')){
     metadata[i] = rownames(Test_sets_stratified_split)[which.max(Test_sets_stratified_split[TotimepointIndeces[i]:TotimepointIndeces[i+1],i])]
     
   }
+  write.table(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(dataset_full)[2:ncol(dataset_full)])), c(rev(colnames(dataset_full))[2:ncol(dataset_full)]), sep = ' from Timepoint '),maxaccuracies,metadata,random_estimator[1:length(random_estimator)-1])
+              ,file = paste(output_dir,'Maximum_Accuracies_of_Stratified_Tests.tab',sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
   
-  write.csv(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(dataset_full)[2:ncol(dataset_full)])), c(rev(colnames(dataset_full))[2:ncol(dataset_full)]), sep = ' from Timepoint '),maxaccuracies,metadata,random_estimator[1:length(random_estimator)-1]),file = paste(output_dir,'Maximum_Accuracies_of_Stratified_Tests.csv',sep = '/'),row.names = F, sep = '\t')
+  
+  #write.csv(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(dataset_full)[2:ncol(dataset_full)])), c(rev(colnames(dataset_full))[2:ncol(dataset_full)]), sep = ' from Timepoint '),maxaccuracies,metadata,random_estimator[1:length(random_estimator)-1]),file = paste(output_dir,'Maximum_Accuracies_of_Stratified_Tests.csv',sep = '/'),row.names = F, sep = '\t')
   
   ###################### Write files of Best Accuracies Train_sets_LOO ########################################
   
@@ -1281,8 +1495,10 @@ if (new_run==T || (new_run == F & action =='Continue')){
     metadata[i] = rownames(Train_sets_LOO)[which.max(Train_sets_LOO[TotimepointIndeces[i]:TotimepointIndeces[i+1],i])]
     
   }
+  write.table(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(dataset_full)[2:ncol(dataset_full)])), c(rev(colnames(dataset_full))[2:ncol(dataset_full)]), sep = ' from Timepoint '),maxaccuracies,metadata,random_estimator[1:length(random_estimator)-1])
+              ,file = paste(output_dir,'Maximum_Accuracies_of_Train_sets_LOO.tab',sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
   
-  write.csv(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(dataset_full)[2:ncol(dataset_full)])), c(rev(colnames(dataset_full))[2:ncol(dataset_full)]), sep = ' from Timepoint '),maxaccuracies,metadata,random_estimator[1:length(random_estimator)-1]),file = paste(output_dir,'Maximum_Accuracies_of_Train_sets_LOO.csv',sep = '/'),row.names = F, sep = '\t')
+  #write.csv(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(dataset_full)[2:ncol(dataset_full)])), c(rev(colnames(dataset_full))[2:ncol(dataset_full)]), sep = ' from Timepoint '),maxaccuracies,metadata,random_estimator[1:length(random_estimator)-1]),file = paste(output_dir,'Maximum_Accuracies_of_Train_sets_LOO.csv',sep = '/'),row.names = F, sep = '\t')
   
   ###################### Write files of Best Accuracies TrainSplits ########################################
   
@@ -1295,8 +1511,10 @@ if (new_run==T || (new_run == F & action =='Continue')){
     metadata[i] = rownames(Train_sets_stratified_split)[which.max(Train_sets_stratified_split[TotimepointIndeces[i]:TotimepointIndeces[i+1],i])]
     
   }
+  write.table(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(dataset_full)[2:ncol(dataset_full)])), c(rev(colnames(dataset_full))[2:ncol(dataset_full)]), sep = ' from Timepoint '),maxaccuracies,metadata,random_estimator[1:length(random_estimator)-1]),
+              file = paste(output_dir,'Maximum_Accuracies_of_TrainSplits.tab',sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
   
-  write.csv(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(dataset_full)[2:ncol(dataset_full)])), c(rev(colnames(dataset_full))[2:ncol(dataset_full)]), sep = ' from Timepoint '),maxaccuracies,metadata,random_estimator[1:length(random_estimator)-1]),file = paste(output_dir,'Maximum_Accuracies_of_TrainSplits.csv',sep = '/'),row.names = F, sep = '\t')
+  #write.csv(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(dataset_full)[2:ncol(dataset_full)])), c(rev(colnames(dataset_full))[2:ncol(dataset_full)]), sep = ' from Timepoint '),maxaccuracies,metadata,random_estimator[1:length(random_estimator)-1]),file = paste(output_dir,'Maximum_Accuracies_of_TrainSplits.csv',sep = '/'),row.names = F, sep = '\t')
   
   ###################### Perform Chi-square analysis to check metadata influence on T0 #####################
   
@@ -1362,4 +1580,3 @@ if (new_run==T || (new_run == F & action =='Continue')){
 } else {
   print (paste('Cronos has already run with the exact same parameters. The output files are stored in',sub(pattern = './',replacement = '',x = directory),sep = ' '))
 }
-
