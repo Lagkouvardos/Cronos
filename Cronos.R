@@ -6,7 +6,7 @@
 
 # Please set the directory of the script as the working folder (e.g D:/studyname/Data/Chronos/)
 # Note: the path is denoted by forward slash "/".
-working_directory = "~/Working_Chronos/Cronos_Final/" #<--- CHANGE ACCORDINGLY !!! 
+working_directory = "~/Working_Chronos/Cronos_Final/" #<--- CHANGE ACCORDINGLY !!!   "~/Working_Chronos/Cronos_Final/"
 
 
 # Please give the file name of the normalized OTU-table without taxonomic classification
@@ -225,6 +225,13 @@ if (new_run==T || (new_run == F & action =='Continue')){
   
   # Calculate the UniFrac distance matrix for comparing microbial communities
   for (name in names(timepoint_list)){
+    
+    # Create temporary files
+    temp_clusters_medoids <- c()
+    temp_medoid_names <- c()
+    temp_number_samples <- c()
+    temp_time <- c()
+    
     unifracs <- GUniFrac(otu.tab = timepoint_list[[name]] ,tree = rooted_tree, alpha = c(0.0,0.5,1.0))$unifracs
     
     # Weight on abundant lineages so  the distance is not dominated by highly abundant lineages with 0.5 having the best power
@@ -272,7 +279,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
     
     # Export plot with the Calinski-Harabasz scores for each k
     jpeg(filename =paste(paste(output_dir,"Calinski-Harabasz",sep = '/'), paste(paste('Calinski-Harabasz_index',name,sep = ' of Timepoint '),'jpeg',sep = ' .'),sep = '/'),width = 800,height=842)
-    plot(calinski_harabasz_values, type="h", xlab="k clusters", ylab="CH index",main='Calinski-Harabasz scores of different #Clusters')
+    plot(2:9,calinski_harabasz_values, type="h", xlab="k clusters", ylab="CH index",main='Calinski-Harabasz scores of different #Clusters')
     legend("topright", c("PAM"), fill=c("black"))
     dev.off()
     
@@ -285,20 +292,20 @@ if (new_run==T || (new_run == F & action =='Continue')){
     # Store the information about the medoids, the timepoints and the clusters
     if (name!="ot"){
       if (name!=External_Reference_Point){
-        medoids_plot = c(medoids_plot, clustering_results[[2]])
+        temp_medoids_plot = c(clustering_results[[2]])
         for (i in 1:best_k){
-          medoid_names <- c(medoid_names, paste0("TP:",name," Cl:",i))
-          number_samples <- c(number_samples,length(which(clusters==i))/length(clusters))
-          time <- c(time,name)
-          clusters_medoids <- c(clusters_medoids,paste("Cluster",i))
+          temp_medoid_names <- c(temp_medoid_names, paste0("TP:",name," Cl:",i))
+          temp_number_samples <- c(temp_number_samples,length(which(clusters==i))/length(clusters))
+          temp_time <- c(temp_time,name)
+          temp_clusters_medoids <- c(temp_clusters_medoids,paste("Cluster",i))
         }
       } else {
-        medoids_plot = c(medoids_plot, clustering_results[[2]])
+        temp_medoids_plot = c( clustering_results[[2]])
         for (i in 1:best_k){
-          medoid_names <- c(medoid_names, paste0(External_Reference_Point," Cl:",i))
-          number_samples <- c(number_samples,length(which(clusters==i))/length(clusters))
-          time <- c(time,name)
-          clusters_medoids <- c(clusters_medoids,paste("Cluster",i))
+          temp_medoid_names <- c( temp_medoid_names,paste0(External_Reference_Point," Cl:",i))
+          temp_number_samples <- c(temp_number_samples,length(which(clusters==i))/length(clusters))
+          temp_time <- c(temp_time,name)
+          temp_clusters_medoids <- c(temp_clusters_medoids,paste("Cluster",i))
           
         }
       }
@@ -358,6 +365,40 @@ if (new_run==T || (new_run == F & action =='Continue')){
     BIC_list[[name]] = gmm_testing$BIC
     if (gmm_testing$G == 1){
       samples_on_clusters[,name] = rep(1,nrow(samples_on_clusters))
+      
+      # Store the information about the medoids, the timepoints and the clusters
+      if (name!="ot"){
+        if (name!=External_Reference_Point){
+          clustering_results = PAM_clustering(unifract_dist = unifract_dist, k = 1)
+          temp_medoids_plot = c( clustering_results[[2]])
+          
+          temp_medoid_names <- c( paste0("TP:",name," Cl:",1))
+          temp_number_samples <- c(length(which(clusters==1))/length(clusters))
+          temp_time <- name
+          temp_clusters_medoids <- c(paste("Cluster",1))
+          
+        } else {
+          clustering_results = PAM_clustering(unifract_dist = unifract_dist, k = 1)
+          temp_medoids_plot = c(clustering_results[[2]])
+          
+          medoid_names <- c(medoid_names, paste0(External_Reference_Point," Cl:",1))
+          temp_number_samples <- c(length(which(clusters==1))/length(clusters))
+          temp_time <- name
+          temp_clusters_medoids <- c(paste("Cluster",1))
+          
+          
+        }
+        
+      }
+    }
+    
+    # Store the information about the medoids, the timepoints and the clusters
+    if (name!="ot"){
+      medoids_plot = c(medoids_plot, temp_medoids_plot)
+      medoid_names <- c(medoid_names, temp_medoid_names)
+      number_samples <- c(number_samples,temp_number_samples)
+      time <- c(time,temp_time)
+      clusters_medoids <- c(clusters_medoids,temp_clusters_medoids)
     }
     
   }
@@ -1427,6 +1468,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
     
     # Barplot of the Accuracies
     barplot <-  ggplot(data=temp_df, aes(x=Timepoints, y=Percentages)) +
+      scale_y_continuous(limits=c(0,100),breaks = c(0,20,40,60,80,100))+
       geom_bar(aes(fill= Clusters),stat="identity", position="dodge",alpha=0.7)+
       geom_text(aes(x=Timepoints, y=Percentages,label=meta, group = Clusters),position = position_dodge(width = .9),angle=90,hjust=2.5)+
       ylab("Acurracy")+
