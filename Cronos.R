@@ -255,9 +255,9 @@ if (new_run==T || (new_run == F & action =='Continue')){
         clusteringP <- clustering_results[[1]]
         medoids = clustering_results[[2]]
         avg_width = clustering_results[[3]]
-        calinski_harabasz_values= c(calinski_harabasz_values,(calinhara(x = unifract_dist,cn = k, clustering = clusteringP)))
+        calinski_harabasz_values= c(calinski_harabasz_values,(cluster.stats(unifract_dist,clusteringP)[["ch"]]))
       }
-      
+
       best_delta_score<- which.min(diff(calinski_harabasz_values))
       highest <- which.max(calinski_harabasz_values) +1
       best_final_score <- calinski_harabasz_values[best_delta_score]- calinski_harabasz_values[highest] - min(diff(calinski_harabasz_values))
