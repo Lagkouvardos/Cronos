@@ -8,13 +8,12 @@
 # Note: the path is denoted by forward slash "/".
 working_directory = "~/Working_Chronos/Cronos_Final/" #<--- CHANGE ACCORDINGLY !!!   "~/Working_Chronos/Cronos_Final/"
 
-
 # Please give the file name of the normalized OTU-table without taxonomic classification
-input_otu = "SOTUs-Table.tab"           #<--- CHANGE ACCORDINGLY !!!
+input_otu = "SOTUs-Table-OverTime.tab"           #<--- CHANGE ACCORDINGLY !!!
 # Please give the name of the meta-file that contains individual sample information
-input_meta = "Mapping_File_Inf_St.csv"                #<--- CHANGE ACCORDINGLY !!!
+input_meta = "Mapping_File_Inf_St_Overtime.tab"                #<--- CHANGE ACCORDINGLY !!!
 # Please give the name of the phylogenetic tree constructed from the OTU sequences
-input_tree = "SOTUs-NJTree.tre"         #<--- CHANGE ACCORDINGLY !!!
+input_tree = "SOTUs-NJTree-All.tre"         #<--- CHANGE ACCORDINGLY !!!
 
 
 # Please specify if the file contains external data. One example is when analyzing infant data
@@ -100,7 +99,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
   ##########################################################################################################################
   
   ############################ Reading the files ###########################################
-  meta_file <- read.table (file = input_meta, check.names = FALSE, header = TRUE, dec = ".", sep = ",", row.names = 1, comment.char = "", stringsAsFactors = F)
+  meta_file <- read.table (file = input_meta, check.names = FALSE, header = TRUE, dec = ".", sep = "\t", row.names = 1, comment.char = "", stringsAsFactors = F)
   # Clean table from empty lines
   meta_file <- data.frame(meta_file[!apply(is.na(meta_file) | meta_file=="",1,all),])
   # Order the mapping file by sample names (ascending)
