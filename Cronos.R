@@ -1359,24 +1359,24 @@ if (new_run==T || (new_run == F & action =='Continue')){
     
     for (y in 1:ncol(Train_sets_LOO)){
       if ((column+y) <= ncol(Train_sets_LOO)){
-        max_Train_sets_LOO <- c( max_Train_sets_LOO, max(as.numeric(Train_sets_LOO[row:Npredictions,column+y])))
-        meta_Train_sets_LOO <- c(meta_Train_sets_LOO, names(which(Train_sets_LOO[row:Npredictions,column+y]== as.character(max(as.numeric(Train_sets_LOO[row:Npredictions,column+y]))))[1]))
-        max_Test_sets_LOO <- c( max_Test_sets_LOO,max(as.numeric(Test_sets_LOO[row:Npredictions,column+y])))
-        meta_Test_sets_LOO <- c(meta_Test_sets_LOO, names(which(Test_sets_LOO[row:Npredictions,column+y]== as.character(max(as.numeric(Test_sets_LOO[row:Npredictions,column+y]))))[1]))
-        max_Train_sets_stratified_split <- c( max_Train_sets_stratified_split, max(as.numeric(Train_sets_stratified_split[row:Npredictions,column+y])))
-        meta_Train_sets_stratified_split<- c(meta_Train_sets_stratified_split, names(which(Train_sets_stratified_split[row:Npredictions,column+y]== as.character(max(as.numeric(Train_sets_stratified_split[row:Npredictions,column+y]))))[1]))
-        max_Test_sets_stratified_split <- c( max_Test_sets_stratified_split, max(as.numeric(Test_sets_stratified_split[row:Npredictions,column+y])))
-        meta_Test_sets_stratified_split <- c(meta_Test_sets_stratified_split, names(which(Test_sets_stratified_split[row:Npredictions,column+y]== as.character( max(as.numeric(Test_sets_stratified_split[row:Npredictions,column+y]))))[1]))
+        max_Train_sets_LOO <- c( max_Train_sets_LOO, max(as.numeric(Train_sets_LOO[row:(row+Npredictions-1),column+y])))
+        meta_Train_sets_LOO <- c(meta_Train_sets_LOO, names(which(Train_sets_LOO[row:(row+Npredictions-1),column+y]== as.character(max(as.numeric(Train_sets_LOO[row:(row+Npredictions-1),column+y]))))[1]))
+        max_Test_sets_LOO <- c( max_Test_sets_LOO,max(as.numeric(Test_sets_LOO[row:(row+Npredictions-1),column+y])))
+        meta_Test_sets_LOO <- c(meta_Test_sets_LOO, names(which(Test_sets_LOO[row:(row+Npredictions-1),column+y]== as.character(max(as.numeric(Test_sets_LOO[row:(row+Npredictions-1),column+y]))))[1]))
+        max_Train_sets_stratified_split <- c( max_Train_sets_stratified_split, max(as.numeric(Train_sets_stratified_split[row:(row+Npredictions-1),column+y])))
+        meta_Train_sets_stratified_split<- c(meta_Train_sets_stratified_split, names(which(Train_sets_stratified_split[row:(row+Npredictions-1),column+y]== as.character(max(as.numeric(Train_sets_stratified_split[row:(row+Npredictions-1),column+y]))))[1]))
+        max_Test_sets_stratified_split <- c( max_Test_sets_stratified_split, max(as.numeric(Test_sets_stratified_split[row:(row+Npredictions-1),column+y])))
+        meta_Test_sets_stratified_split <- c(meta_Test_sets_stratified_split, names(which(Test_sets_stratified_split[row:(row+Npredictions-1),column+y]== as.character( max(as.numeric(Test_sets_stratified_split[row:(row+Npredictions-1),column+y]))))[1]))
       }
     }
     
     # Save the accuracies in the heatmap matrix
-    heatmap_matrix_statified[(length(heatmap_matrix_statified)-column),c(1:length(max_Test_sets_stratified_split))] <- max_Test_sets_stratified_split
+    heatmap_matrix_statified[(length(heatmap_matrix_statified)-column),c(1:length(max_Test_sets_stratified_split))] <- rev(max_Test_sets_stratified_split)
     
-    heatmap_matrix_LOO[(length(heatmap_matrix_LOO)-column),c(1:length(max_Test_sets_LOO))] <- max_Test_sets_LOO
+    heatmap_matrix_LOO[(length(heatmap_matrix_LOO)-column),c(1:length(max_Test_sets_LOO))] <- rev(max_Test_sets_LOO)
     
     # Formation of the metadata matrix 
-    temp_df_meta <- data.frame(rbind(meta_Test_sets_LOO,meta_Test_sets_stratified_split, meta_Train_sets_LOO,meta_Train_sets_stratified_split))
+    temp_df_meta <- data.frame(rbind(rev(meta_Test_sets_LOO),rev(meta_Test_sets_stratified_split), rev(meta_Train_sets_LOO),rev(meta_Train_sets_stratified_split)))
     temp_df_meta <- data.frame(c("Test_sets_LOO","Test_sets_stratified_split","Train_sets_LOO","Train_sets_stratified_split"),temp_df_meta)
     colnames(temp_df_meta) <- c("rows",colnames(dataset_full_on_clusters)[1:(ncol(Train_sets_LOO)-column)])
     
@@ -1390,7 +1390,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
     
     
     # Formation of the accuracies matrix 
-    temp_df <- data.frame(rbind(max_Test_sets_LOO,max_Test_sets_stratified_split, max_Train_sets_LOO,max_Train_sets_stratified_split))
+    temp_df <- data.frame(rbind(rev(max_Test_sets_LOO),rev(max_Test_sets_stratified_split), rev(max_Train_sets_LOO),rev(max_Train_sets_stratified_split)))
     temp_df <- data.frame(c("Test_sets_LOO","Test_sets_stratified_split","Train_sets_LOO","Train_sets_stratified_split"),temp_df)
     colnames(temp_df) <- c("rows",colnames(dataset_full_on_clusters)[1:(ncol(Train_sets_LOO)-column)])
     
