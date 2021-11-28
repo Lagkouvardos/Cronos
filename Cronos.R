@@ -8,13 +8,12 @@
 # Note: the path is denoted by forward slash "/".
 working_directory = "~/Working_Chronos/Cronos_Final/" #<--- CHANGE ACCORDINGLY !!!   "~/Working_Chronos/Cronos_Final/"
 
-
 # Please give the file name of the normalized OTU-table without taxonomic classification
-input_otu = "SOTUs-Table.tab"           #<--- CHANGE ACCORDINGLY !!!
+input_otu = "SOTUs-Table-OverTime.tab"           #<--- CHANGE ACCORDINGLY !!!
 # Please give the name of the meta-file that contains individual sample information
-input_meta = "Mapping_File_Inf_St.csv"                #<--- CHANGE ACCORDINGLY !!!
+input_meta = "Mapping_File_Inf_St_Overtime.tab"                #<--- CHANGE ACCORDINGLY !!!
 # Please give the name of the phylogenetic tree constructed from the OTU sequences
-input_tree = "SOTUs-NJTree.tre"         #<--- CHANGE ACCORDINGLY !!!
+input_tree = "SOTUs-NJTree-All.tre"         #<--- CHANGE ACCORDINGLY !!!
 
 
 # Please specify if the file contains external data. One example is when analyzing infant data
@@ -93,13 +92,13 @@ if (new_run==T || (new_run == F & action =='Continue')){
   
   write.table(x = parameters,file = paste(output_dir,'Cronos_log.tab',sep = '/'), sep = "\t",col.names =F, row.names = TRUE,quote = FALSE)
   
-
+  
   ##################################### SECTION ############################################################################
   #################################### CLUSTERING ##########################################################################
   ##########################################################################################################################
   
   ############################ Reading the files ###########################################
-  meta_file <- read.table (file = input_meta, check.names = FALSE, header = TRUE, dec = ".", sep = ",", row.names = 1, comment.char = "", stringsAsFactors = F)
+  meta_file <- read.table (file = input_meta, check.names = FALSE, header = TRUE, dec = ".", sep = "\t", row.names = 1, comment.char = "", stringsAsFactors = F)
   # Clean table from empty lines
   meta_file <- data.frame(meta_file[!apply(is.na(meta_file) | meta_file=="",1,all),])
   # Order the mapping file by sample names (ascending)
@@ -254,7 +253,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
         clusteringP <- clustering_results[[1]]
         medoids = clustering_results[[2]]
         avg_width = clustering_results[[3]]
-        calinski_harabasz_values= c(calinski_harabasz_values,(calinhara(x = unifract_dist,cn = k, clustering = clusteringP)))
+        calinski_harabasz_values= c(calinski_harabasz_values,(cluster.stats(unifract_dist,clusteringP)[["ch"]]))
       }
       
       best_delta_score<- which.min(diff(calinski_harabasz_values))
@@ -672,7 +671,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
   write.table(x = samples_on_clusters, file = paste(output_dir, "Samples_in_Timepoint-specific_Clusters.tab",sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
   write.table(x = taxa_clusters,       file = paste(output_dir, "Taxonomic_profile_of_clusters.tab", sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
   
-
+  
   No_clusters_per_timepoint = apply(dataset_full, 2,function(x){max(x,na.rm = T)})
   transition_names = c()
   for (j in 1:length(No_clusters_per_timepoint)){
@@ -1303,10 +1302,10 @@ if (new_run==T || (new_run == F & action =='Continue')){
     Test_stratified_overtime_accuracy  <- c(Test_set_stratified_accuracy ,Test_stratified_overtime_accuracy)
     Train_LOO_overtime_accuracy <- c(Train_set_LOO_accuracy,Train_LOO_overtime_accuracy)
     Test_LOO_overtime_accuracy  <- c(Test_set_LOO_accuracy, Test_LOO_overtime_accuracy)
-
+    
   }
   
-
+  
   
   ###################### Calculate all possible combinations of metadata calculated ##########################
   Npredictions = 0
@@ -1342,7 +1341,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
   
   
   # Counting indices
-  row <- 1 ; coloumn <- 0
+  row <- 1 ; column <- 0
   
   
   # Calculate the maximum accuracy for every timepoint
@@ -1359,27 +1358,27 @@ if (new_run==T || (new_run == F & action =='Continue')){
     meta_Test_sets_stratified_split <- c()
     
     for (y in 1:ncol(Train_sets_LOO)){
-      if ((coloumn+y) <= ncol(Train_sets_LOO)){
-        max_Train_sets_LOO <- c( max_Train_sets_LOO, max(as.numeric(Train_sets_LOO[row:Npredictions,coloumn+y])))
-        meta_Train_sets_LOO <- c(meta_Train_sets_LOO, names(which(Train_sets_LOO[row:Npredictions,coloumn+y]== as.character(max(as.numeric(Train_sets_LOO[row:Npredictions,coloumn+y]))))[1]))
-        max_Test_sets_LOO <- c( max_Test_sets_LOO,max(as.numeric(Test_sets_LOO[row:Npredictions,coloumn+y])))
-        meta_Test_sets_LOO <- c(meta_Test_sets_LOO, names(which(Test_sets_LOO[row:Npredictions,coloumn+y]== as.character(max(as.numeric(Test_sets_LOO[row:Npredictions,coloumn+y]))))[1]))
-        max_Train_sets_stratified_split <- c( max_Train_sets_stratified_split, max(as.numeric(Train_sets_stratified_split[row:Npredictions,coloumn+y])))
-        meta_Train_sets_stratified_split<- c(meta_Train_sets_stratified_split, names(which(Train_sets_stratified_split[row:Npredictions,coloumn+y]== as.character(max(as.numeric(Train_sets_stratified_split[row:Npredictions,coloumn+y]))))[1]))
-        max_Test_sets_stratified_split <- c( max_Test_sets_stratified_split, max(as.numeric(Test_sets_stratified_split[row:Npredictions,coloumn+y])))
-        meta_Test_sets_stratified_split <- c(meta_Test_sets_stratified_split, names(which(Test_sets_stratified_split[row:Npredictions,coloumn+y]== as.character( max(as.numeric(Test_sets_stratified_split[row:Npredictions,coloumn+y]))))[1]))
+      if ((column+y) <= ncol(Train_sets_LOO)){
+        max_Train_sets_LOO <- c( max_Train_sets_LOO, max(as.numeric(Train_sets_LOO[row:Npredictions,column+y])))
+        meta_Train_sets_LOO <- c(meta_Train_sets_LOO, names(which(Train_sets_LOO[row:Npredictions,column+y]== as.character(max(as.numeric(Train_sets_LOO[row:Npredictions,column+y]))))[1]))
+        max_Test_sets_LOO <- c( max_Test_sets_LOO,max(as.numeric(Test_sets_LOO[row:Npredictions,column+y])))
+        meta_Test_sets_LOO <- c(meta_Test_sets_LOO, names(which(Test_sets_LOO[row:Npredictions,column+y]== as.character(max(as.numeric(Test_sets_LOO[row:Npredictions,column+y]))))[1]))
+        max_Train_sets_stratified_split <- c( max_Train_sets_stratified_split, max(as.numeric(Train_sets_stratified_split[row:Npredictions,column+y])))
+        meta_Train_sets_stratified_split<- c(meta_Train_sets_stratified_split, names(which(Train_sets_stratified_split[row:Npredictions,column+y]== as.character(max(as.numeric(Train_sets_stratified_split[row:Npredictions,column+y]))))[1]))
+        max_Test_sets_stratified_split <- c( max_Test_sets_stratified_split, max(as.numeric(Test_sets_stratified_split[row:Npredictions,column+y])))
+        meta_Test_sets_stratified_split <- c(meta_Test_sets_stratified_split, names(which(Test_sets_stratified_split[row:Npredictions,column+y]== as.character( max(as.numeric(Test_sets_stratified_split[row:Npredictions,column+y]))))[1]))
       }
     }
     
     # Save the accuracies in the heatmap matrix
-    heatmap_matrix_statified[length(heatmap_matrix_LOO),c(1:length(max_Test_sets_stratified_split))] <- max_Test_sets_stratified_split
+    heatmap_matrix_statified[(length(heatmap_matrix_statified)-column),c(1:length(max_Test_sets_stratified_split))] <- max_Test_sets_stratified_split
     
-    heatmap_matrix_LOO[length(heatmap_matrix_LOO),c(1:length(max_Test_sets_LOO))] <- max_Test_sets_LOO
+    heatmap_matrix_LOO[(length(heatmap_matrix_LOO)-column),c(1:length(max_Test_sets_LOO))] <- max_Test_sets_LOO
     
     # Formation of the metadata matrix 
     temp_df_meta <- data.frame(rbind(meta_Test_sets_LOO,meta_Test_sets_stratified_split, meta_Train_sets_LOO,meta_Train_sets_stratified_split))
     temp_df_meta <- data.frame(c("Test_sets_LOO","Test_sets_stratified_split","Train_sets_LOO","Train_sets_stratified_split"),temp_df_meta)
-    colnames(temp_df_meta) <- c("rows",colnames(dataset_full_on_clusters)[1:(ncol(Train_sets_LOO)-coloumn)])
+    colnames(temp_df_meta) <- c("rows",colnames(dataset_full_on_clusters)[1:(ncol(Train_sets_LOO)-column)])
     
     # Unpivot temp_df_meta from wide to long format using the row names as the identifier
     temp_df_meta <-  data.frame(melt(temp_df_meta, cols = 2:ncol(temp_df_meta),id.vars ="rows"))
@@ -1387,13 +1386,13 @@ if (new_run==T || (new_run == F & action =='Continue')){
     
     # Convert Timepoints and Cluster columns into factors
     temp_df_meta[,"Clusters"] <- factor(temp_df_meta[,"Clusters"],levels = unique(temp_df_meta[,"Clusters"]))
-    temp_df_meta[,"Timepoints"] <- factor( temp_df_meta[,"Timepoints"], levels=colnames(dataset_full_on_clusters)[1:(ncol(Train_sets_LOO)-coloumn)])
+    temp_df_meta[,"Timepoints"] <- factor( temp_df_meta[,"Timepoints"], levels=colnames(dataset_full_on_clusters)[1:(ncol(Train_sets_LOO)-column)])
     
     
     # Formation of the accuracies matrix 
     temp_df <- data.frame(rbind(max_Test_sets_LOO,max_Test_sets_stratified_split, max_Train_sets_LOO,max_Train_sets_stratified_split))
     temp_df <- data.frame(c("Test_sets_LOO","Test_sets_stratified_split","Train_sets_LOO","Train_sets_stratified_split"),temp_df)
-    colnames(temp_df) <- c("rows",colnames(dataset_full_on_clusters)[1:(ncol(Train_sets_LOO)-coloumn)])
+    colnames(temp_df) <- c("rows",colnames(dataset_full_on_clusters)[1:(ncol(Train_sets_LOO)-column)])
     
     # Unpivot temp_df from wide to long format using the row names as the identifier
     temp_df <-  data.frame(melt(temp_df, cols = 2:ncol(temp_df),id.vars ="rows"))
@@ -1401,7 +1400,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
     
     # Convert Timepoints and Cluster columns into factors
     temp_df[,"Clusters"] <- factor(temp_df[,"Clusters"],levels = unique(temp_df[,"Clusters"]))
-    temp_df[,"Timepoints"] <- factor( temp_df[,"Timepoints"], levels=colnames(dataset_full_on_clusters)[1:(ncol(Train_sets_LOO)-coloumn)])
+    temp_df[,"Timepoints"] <- factor( temp_df[,"Timepoints"], levels=colnames(dataset_full_on_clusters)[1:(ncol(Train_sets_LOO)-column)])
     temp_df <- data.frame(temp_df, meta=as.factor(temp_df_meta[,3]))
     
     # Create a vector with the colours for the barplot
@@ -1424,11 +1423,11 @@ if (new_run==T || (new_run == F & action =='Continue')){
     # Calculate the initial line for the next iteration
     row <- row+Npredictions
     # Calculate the initial column for the next iteration
-    coloumn=coloumn+1
+    column=column+1
     
     # Print the barplots
-    ggsave(paste(paste(output_dir,"Accuracies",sep = '/'),paste(paste('Accuracies of Models on Timepoint', rev(colnames(dataset_full_on_clusters))[coloumn],sep = ' '),'pdf', sep='.'),sep = '/'),barplot)
-    jpeg(filename = paste(paste(output_dir,"Accuracies",sep = '/'),paste(paste('Accuracies of Models on Timepoint', rev(colnames(dataset_full_on_clusters))[coloumn],sep = ' '),'jpeg', sep='.'),sep = '/'))
+    ggsave(paste(paste(output_dir,"Accuracies",sep = '/'),paste(paste('Accuracies of Models on Timepoint', rev(colnames(dataset_full_on_clusters))[column],sep = ' '),'pdf', sep='.'),sep = '/'),barplot)
+    jpeg(filename = paste(paste(output_dir,"Accuracies",sep = '/'),paste(paste('Accuracies of Models on Timepoint', rev(colnames(dataset_full_on_clusters))[column],sep = ' '),'jpeg', sep='.'),sep = '/'))
     print(barplot)
     dev.off()
     
@@ -1436,7 +1435,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
   
   
   
-
+  
   # Function for the Heatmaps
   heatmap <- function (heatmap_matrix,category) {
     # Name the rows and columns of the heatmap matrix
@@ -1500,11 +1499,11 @@ if (new_run==T || (new_run == F & action =='Continue')){
   maxaccuracies <- c()
   metadata <- c()
   for (i in 1:(length(TotimepointIndeces)-1)){
-  
+    
     maxaccuracies[i] <-  max(as.numeric(Test_sets_LOO[TotimepointIndeces[i]:TotimepointIndeces[i+1],i]))
     metadata[i] <-  names(which(Test_sets_LOO[TotimepointIndeces[i]:TotimepointIndeces[i+1],i]== as.character(max(as.numeric(Test_sets_LOO[TotimepointIndeces[i]:TotimepointIndeces[i+1],i]))))[1])
     
-     
+    
     #maxaccuracies[i]   = max(Test_sets_LOO[TotimepointIndeces[i]:TotimepointIndeces[i+1],i])
     #metadata[i] = rownames(Test_sets_LOO)[which.max(Test_sets_LOO[TotimepointIndeces[i]:TotimepointIndeces[i+1],i])]
     
@@ -1512,7 +1511,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
   write.table(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(dataset_full)[2:ncol(dataset_full)])), c(rev(colnames(dataset_full))[2:ncol(dataset_full)]), sep = ' from Timepoint '),maxaccuracies,metadata,random_estimator[1:length(random_estimator)-1]),
               file = paste(output_dir,'Maximum_Accuracies_of_Test_sets_LOO.tab',sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
   
-
+  
   ###################### Write files of Best Accuracies TestSplits ########################################
   
   maxaccuracies <- c()
@@ -1546,7 +1545,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
   write.table(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(dataset_full)[2:ncol(dataset_full)])), c(rev(colnames(dataset_full))[2:ncol(dataset_full)]), sep = ' from Timepoint '),maxaccuracies,metadata,random_estimator[1:length(random_estimator)-1])
               ,file = paste(output_dir,'Maximum_Accuracies_of_Train_sets_LOO.tab',sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
   
-
+  
   ###################### Write files of Best Accuracies TrainSplits ########################################
   
   maxaccuracies <- c()
