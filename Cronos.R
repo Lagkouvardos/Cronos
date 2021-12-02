@@ -9,9 +9,9 @@
 working_directory = "~/Working_Chronos/Cronos_Final/" #<--- CHANGE ACCORDINGLY !!!   "~/Working_Chronos/Cronos_Final/"
 
 # Please give the file name of the normalized OTU-table without taxonomic classification
-input_otu = "SOTUs-Table-OverTime.tab"           #<--- CHANGE ACCORDINGLY !!!
+input_otu = "SOTUs-Table.tab"           #<--- CHANGE ACCORDINGLY !!!
 # Please give the name of the meta-file that contains individual sample information
-input_meta = "Mapping_File_Inf_St_Overtime.tab"                #<--- CHANGE ACCORDINGLY !!!
+input_meta = "Mapping_File_Inf_St.csv"                #<--- CHANGE ACCORDINGLY !!!
 # Please give the name of the phylogenetic tree constructed from the OTU sequences
 input_tree = "SOTUs-NJTree-All.tre"         #<--- CHANGE ACCORDINGLY !!!
 
@@ -98,7 +98,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
   ##########################################################################################################################
   
   ############################ Reading the files ###########################################
-  meta_file <- read.table (file = input_meta, check.names = FALSE, header = TRUE, dec = ".", sep = "\t", row.names = 1, comment.char = "", stringsAsFactors = F)
+  meta_file <- read.table (file = input_meta, check.names = FALSE, header = TRUE, dec = ".", sep = ",", row.names = 1, comment.char = "", stringsAsFactors = F)
   # Clean table from empty lines
   meta_file <- data.frame(meta_file[!apply(is.na(meta_file) | meta_file=="",1,all),])
   # Order the mapping file by sample names (ascending)
@@ -156,10 +156,10 @@ if (new_run==T || (new_run == F & action =='Continue')){
   otu_file <- data.frame(t(otu_file))
   # keep only those that appear in the otu file
   meta_file <- meta_file[rownames(otu_file),]
-  
+
   ############ Checking for and installing packages ####################################
   
-  packages <-c("ade4","dplyr","GUniFrac","phangorn","cluster","fpc","markovchain", 'spgs','caret','nnet','gtools', 'mclust','igraph', 'network','ggplot2','reshape2','easyalluvial','ggrepel') 
+  packages <-c("ade4","dplyr","GUniFrac","phangorn","cluster","fpc","markovchain", 'spgs','caret','nnet','gtools', 'mclust','igraph', 'network','ggplot2','reshape2','easyalluvial','ggrepel', 'vegan') 
   # Function to check whether the package is installed
   InsPack <- function(pack)
   {
@@ -766,7 +766,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
   heatmap_matrix_LOO <- data.frame(matrix(NA,nrow = ncol(dataset_full_on_clusters), ncol=ncol(dataset_full_on_clusters)))
   diag(heatmap_matrix_LOO) <- 100
   
-  heatmap_matrix_statified <- data.frame(matrix(NA,nrow = ncol(dataset_full_on_clusters), ncol=ncol(dataset_full_on_clusters)))
+  heatmap_matrix_statified <- data.frame(matrix(NA,nrow = ncol(dataset_full_on_clusters) , ncol=ncol(dataset_full_on_clusters)))
   diag(heatmap_matrix_statified) <- 100
   
   ###################### Initializing Lists to save metrics of modeling ############################
@@ -1371,9 +1371,9 @@ if (new_run==T || (new_run == F & action =='Continue')){
     }
     
     # Save the accuracies in the heatmap matrix
-    heatmap_matrix_statified[length(heatmap_matrix_LOO),c(1:length(max_Test_sets_stratified_split))] <- max_Test_sets_stratified_split
+    heatmap_matrix_statified[ncol(heatmap_matrix_LOO) - x +1,c(1:length(max_Test_sets_stratified_split))] <- max_Test_sets_stratified_split
     
-    heatmap_matrix_LOO[length(heatmap_matrix_LOO),c(1:length(max_Test_sets_LOO))] <- max_Test_sets_LOO
+    heatmap_matrix_LOO[ncol(heatmap_matrix_LOO) - x +1,c(1:length(max_Test_sets_LOO))] <- max_Test_sets_LOO
     
     # Formation of the metadata matrix 
     temp_df_meta <- data.frame(rbind(meta_Test_sets_LOO,meta_Test_sets_stratified_split, meta_Train_sets_LOO,meta_Train_sets_stratified_split))
@@ -1434,8 +1434,6 @@ if (new_run==T || (new_run == F & action =='Continue')){
   }
   
   
-  
-
   # Function for the Heatmaps
   heatmap <- function (heatmap_matrix,category) {
     # Name the rows and columns of the heatmap matrix
