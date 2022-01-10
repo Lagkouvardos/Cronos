@@ -178,6 +178,8 @@ if (new_run==T || (new_run == F & action =='Continue')){
   
   # Load the phylogenetic tree calculated from the OTU sequences 
   tree_file <- read.tree(input_tree)
+  # Remove single quotes from the tips of the tree
+  tree_file$tip.label <- gsub("'", "", tree_file$tip.label)
   # Root the OTU tree at midpoint 
   rooted_tree <- midpoint(tree_file)
   
