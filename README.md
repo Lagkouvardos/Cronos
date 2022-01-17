@@ -13,11 +13,9 @@ You can select the working directory (folder), which is the directory (folder) w
 R scripts and files are saved. The R script has the following format:
 
 '''
-{
 # Please set the directory of the script as the working folder (e.g D:/studyname/Data/Chronos/)
 # Note: the path is denoted by forward slash "/".
 working_directory = "Here_type_the_name_of_the_folder"
-}
 '''
 
 You should change ONLY what is after the ‘=’ sign. Do not change anything before an ‘=’ sign for the analysis to run. Type the names of the files.
