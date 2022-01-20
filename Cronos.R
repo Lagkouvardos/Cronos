@@ -532,12 +532,8 @@ if (new_run==T || (new_run == F & action =='Continue')){
   
   
   
-  
-  
   for (i in 2:ncol(dataset_full_on_clusters)){
-    for (j in 1:max(dataset_full_on_clusters[,i],na.rm = T)){
-      dataset_full_on_clusters[dataset_full_on_clusters[,i]==j,i] <- independed_clusters[i-1]+j
-    }
+    dataset_full_on_clusters[,i] <- dataset_full_on_clusters[,i]+independed_clusters[i-1]
   }
   
   Markov_Test_X2 <- function(dataset_full){
