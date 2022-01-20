@@ -4,14 +4,18 @@
 
 ########### PLEASE FOLLOW THE INSTRUCTIONS CAREFULLY #####################################
 
+
+working_directory <- dirname(rstudioapi::getSourceEditorContext()$path)
+setwd(path)
+
 # Please set the directory of the script as the working folder (e.g D:/studyname/Data/Chronos/)
 # Note: the path is denoted by forward slash "/".
-working_directory = "~/Working_Chronos/Cronos_Final/" #<--- CHANGE ACCORDINGLY !!!   "~/Working_Chronos/Cronos_Final/"
+#working_directory = "C:/Users/evage/Desktop/cronos_overtime+12" #<--- CHANGE ACCORDINGLY !!!   "~/Working_Chronos/Cronos_Final/"
 
 # Please give the file name of the normalized OTU-table without taxonomic classification
 input_otu = "SOTUs-Table.tab"           #<--- CHANGE ACCORDINGLY !!!
 # Please give the name of the meta-file that contains individual sample information
-input_meta = "Mappings_of_ot&24&St.csv"                #<--- CHANGE ACCORDINGLY !!!
+input_meta = "Mapping_File_Over+24.tab"                #<--- CHANGE ACCORDINGLY !!!
 # Please give the name of the phylogenetic tree constructed from the OTU sequences
 input_tree = "SOTUs-NJTree-All.tre"         #<--- CHANGE ACCORDINGLY !!!
 
@@ -225,7 +229,6 @@ if (new_run==T || (new_run == F & action =='Continue')){
   
   # Calculate the UniFrac distance matrix for comparing microbial communities
   for (name in names(timepoint_list)){
-    
     # Create temporary files
     temp_clusters_medoids <- c()
     temp_medoid_names <- c()
@@ -246,7 +249,6 @@ if (new_run==T || (new_run == F & action =='Continue')){
       return (list(clusters,medoids,avg_width))
     }
     
-    
     optimal_k<- function(unifract_dist, clustering_method){
       calinski_harabasz_values <-c()
       
@@ -258,14 +260,16 @@ if (new_run==T || (new_run == F & action =='Continue')){
         calinski_harabasz_values= c(calinski_harabasz_values,(cluster.stats(unifract_dist,clusteringP)[["ch"]]))
       }
       
-      best_delta_score<- which.min(diff(calinski_harabasz_values))
+      best_delta_score<- which.min(diff(calinski_harabasz_values)) +1
       highest <- which.max(calinski_harabasz_values) +1
-      best_final_score <- calinski_harabasz_values[best_delta_score]- calinski_harabasz_values[highest] - min(diff(calinski_harabasz_values))
-      if (best_final_score>0){
-        best_final_score <- which.max(calinski_harabasz_values) +1
+      if (best_delta_score==highest){
+        best_final_score=highest
+      }
+      else if (calinski_harabasz_values[highest]-calinski_harabasz_values[best_delta_score] > abs(min(diff(calinski_harabasz_values)))){
+        best_final_score <- highest
       }
       else {
-        best_final_score <- which.min(diff(calinski_harabasz_values)) +1
+        best_final_score <- best_delta_score
       }
       return (list(best_final_score, calinski_harabasz_values))
     }
