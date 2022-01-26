@@ -229,6 +229,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
   
   # Calculate the UniFrac distance matrix for comparing microbial communities
   for (name in names(timepoint_list)){
+    
     # Create temporary files
     temp_clusters_medoids <- c()
     temp_medoid_names <- c()
@@ -249,6 +250,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
       return (list(clusters,medoids,avg_width))
     }
     
+    
     optimal_k<- function(unifract_dist, clustering_method){
       calinski_harabasz_values <-c()
       
@@ -260,14 +262,14 @@ if (new_run==T || (new_run == F & action =='Continue')){
         calinski_harabasz_values= c(calinski_harabasz_values,(cluster.stats(unifract_dist,clusteringP)[["ch"]]))
       }
       
-      best_delta_score<- which.min(diff(calinski_harabasz_values)) +1
+      best_delta_score<- which.min(diff(calinski_harabasz_values))
       highest <- which.max(calinski_harabasz_values) +1
-      if (best_delta_score==highest){
-        best_final_score=highest
-      } else if (calinski_harabasz_values[highest-1]-calinski_harabasz_values[best_delta_score-1] > abs(min(diff(calinski_harabasz_values)))){
-        best_final_score <- highest
-      } else {
-        best_final_score <- best_delta_score
+      best_final_score <- calinski_harabasz_values[best_delta_score]- calinski_harabasz_values[highest] - min(diff(calinski_harabasz_values))
+      if (best_final_score>0){
+        best_final_score <- which.max(calinski_harabasz_values) +1
+      }
+      else {
+        best_final_score <- which.min(diff(calinski_harabasz_values)) +1
       }
       return (list(best_final_score, calinski_harabasz_values))
     }
@@ -530,8 +532,12 @@ if (new_run==T || (new_run == F & action =='Continue')){
   
   
   
+  
+  
   for (i in 2:ncol(dataset_full_on_clusters)){
-    dataset_full_on_clusters[,i] <- dataset_full_on_clusters[,i]+independed_clusters[i-1]
+    for (j in 1:max(dataset_full_on_clusters[,i],na.rm = T)){
+      dataset_full_on_clusters[dataset_full_on_clusters[,i]==j,i] <- independed_clusters[i-1]+j
+    }
   }
   
   Markov_Test_X2 <- function(dataset_full){
@@ -1500,9 +1506,13 @@ if (new_run==T || (new_run == F & action =='Continue')){
   metadata <- c()
   for (i in 1:(length(TotimepointIndeces)-1)){
     
-    maxaccuracies[i] <-  max(as.numeric(Test_sets_LOO[(1+TotimepointIndeces[i]):TotimepointIndeces[i+1],i]))
-    metadata[i] <-  names(which(Test_sets_LOO[(1+TotimepointIndeces[i]):TotimepointIndeces[i+1],i]== as.character(max(as.numeric(Test_sets_LOO[(1+TotimepointIndeces[i]):TotimepointIndeces[i+1],i]))))[1])
-
+    maxaccuracies[i] <-  max(as.numeric(Test_sets_LOO[TotimepointIndeces[i]:TotimepointIndeces[i+1],i]))
+    metadata[i] <-  names(which(Test_sets_LOO[TotimepointIndeces[i]:TotimepointIndeces[i+1],i]== as.character(max(as.numeric(Test_sets_LOO[TotimepointIndeces[i]:TotimepointIndeces[i+1],i]))))[1])
+    
+    
+    #maxaccuracies[i]   = max(Test_sets_LOO[TotimepointIndeces[i]:TotimepointIndeces[i+1],i])
+    #metadata[i] = rownames(Test_sets_LOO)[which.max(Test_sets_LOO[TotimepointIndeces[i]:TotimepointIndeces[i+1],i])]
+    
   }
   write.table(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(dataset_full)[2:ncol(dataset_full)])), c(rev(colnames(dataset_full))[2:ncol(dataset_full)]), sep = ' from Timepoint '),maxaccuracies,metadata,random_estimator[1:length(random_estimator)-1]),
               file = paste(output_dir,'Maximum_Accuracies_of_Test_sets_LOO.tab',sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
@@ -1514,9 +1524,12 @@ if (new_run==T || (new_run == F & action =='Continue')){
   metadata <- c()
   for (i in 1:(length(TotimepointIndeces)-1)){
     
-    maxaccuracies[i] <-  max(as.numeric(Test_sets_stratified_split[(1+TotimepointIndeces[i]):TotimepointIndeces[i+1],i]))
-    metadata[i] <-  names(which(Test_sets_stratified_split[(1+TotimepointIndeces[i]):TotimepointIndeces[i+1],i]== as.character(max(as.numeric(Test_sets_stratified_split[(1+TotimepointIndeces[i]):TotimepointIndeces[i+1],i]))))[1])
-
+    maxaccuracies[i] <-  max(as.numeric(Test_sets_stratified_split[TotimepointIndeces[i]:TotimepointIndeces[i+1],i]))
+    metadata[i] <-  names(which(Test_sets_stratified_split[TotimepointIndeces[i]:TotimepointIndeces[i+1],i]== as.character(max(as.numeric(Test_sets_stratified_split[TotimepointIndeces[i]:TotimepointIndeces[i+1],i]))))[1])
+    
+    # maxaccuracies[i]   = max(Test_sets_stratified_split[TotimepointIndeces[i]:TotimepointIndeces[i+1],i])
+    # metadata[i] = rownames(Test_sets_stratified_split)[which.max(Test_sets_stratified_split[TotimepointIndeces[i]:TotimepointIndeces[i+1],i])]
+    
   }
   write.table(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(dataset_full)[2:ncol(dataset_full)])), c(rev(colnames(dataset_full))[2:ncol(dataset_full)]), sep = ' from Timepoint '),maxaccuracies,metadata,random_estimator[1:length(random_estimator)-1])
               ,file = paste(output_dir,'Maximum_Accuracies_of_Stratified_Tests.tab',sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
@@ -1528,8 +1541,11 @@ if (new_run==T || (new_run == F & action =='Continue')){
   metadata <- c()
   for (i in 1:(length(TotimepointIndeces)-1)){
     
-    maxaccuracies[i] <-  max(as.numeric(Train_sets_LOO[(1+TotimepointIndeces[i]):TotimepointIndeces[i+1],i]))
-    metadata[i] <-  names(which(Train_sets_LOO[(1+TotimepointIndeces[i]):TotimepointIndeces[i+1],i]== as.character(max(as.numeric(Train_sets_LOO[(1+TotimepointIndeces[i]):TotimepointIndeces[i+1],i]))))[1])
+    maxaccuracies[i] <-  max(as.numeric(Train_sets_LOO[TotimepointIndeces[i]:TotimepointIndeces[i+1],i]))
+    metadata[i] <-  names(which(Train_sets_LOO[TotimepointIndeces[i]:TotimepointIndeces[i+1],i]== as.character(max(as.numeric(Train_sets_LOO[TotimepointIndeces[i]:TotimepointIndeces[i+1],i]))))[1])
+    
+    # maxaccuracies[i]   = max(Train_sets_LOO[TotimepointIndeces[i]:TotimepointIndeces[i+1],i])
+    # metadata[i] = rownames(Train_sets_LOO)[which.max(Train_sets_LOO[TotimepointIndeces[i]:TotimepointIndeces[i+1],i])]
     
   }
   write.table(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(dataset_full)[2:ncol(dataset_full)])), c(rev(colnames(dataset_full))[2:ncol(dataset_full)]), sep = ' from Timepoint '),maxaccuracies,metadata,random_estimator[1:length(random_estimator)-1])
@@ -1543,9 +1559,12 @@ if (new_run==T || (new_run == F & action =='Continue')){
   
   for (i in 1:(length(TotimepointIndeces)-1)){
     
-    maxaccuracies[i] <-  max(as.numeric(Train_sets_stratified_split[(1+TotimepointIndeces[i]):TotimepointIndeces[i+1],i]))
-    metadata[i] <-  names(which(Train_sets_stratified_split[(1+TotimepointIndeces[i]):TotimepointIndeces[i+1],i]== as.character(max(as.numeric(Train_sets_stratified_split[(1+TotimepointIndeces[i]):TotimepointIndeces[i+1],i]))))[1])
-
+    maxaccuracies[i] <-  max(as.numeric(Train_sets_stratified_split[TotimepointIndeces[i]:TotimepointIndeces[i+1],i]))
+    metadata[i] <-  names(which(Train_sets_stratified_split[TotimepointIndeces[i]:TotimepointIndeces[i+1],i]== as.character(max(as.numeric(Train_sets_stratified_split[TotimepointIndeces[i]:TotimepointIndeces[i+1],i]))))[1])
+    
+    # maxaccuracies[i]   = max(Train_sets_stratified_split[TotimepointIndeces[i]:TotimepointIndeces[i+1],i])
+    # metadata[i] = rownames(Train_sets_stratified_split)[which.max(Train_sets_stratified_split[TotimepointIndeces[i]:TotimepointIndeces[i+1],i])]
+    
   }
   
   write.table(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(dataset_full)[2:ncol(dataset_full)])), c(rev(colnames(dataset_full))[2:ncol(dataset_full)]), sep = ' from Timepoint '),maxaccuracies,metadata,random_estimator[1:length(random_estimator)-1]),
