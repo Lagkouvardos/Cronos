@@ -3,11 +3,10 @@
 
 ########### PLEASE FOLLOW THE INSTRUCTIONS CAREFULLY #####################################
 
-working_directory <- dirname(rstudioapi::getSourceEditorContext()$path)
 
 # Please set the directory of the script as the working folder (e.g D:/studyname/Data/Chronos/)
 # Note: the path is denoted by forward slash "/".
-#working_directory = "C:/Users/evage/Desktop/cronos_overtime+12" #<--- CHANGE ACCORDINGLY !!!   "~/Working_Chronos/Cronos_Final/"
+working_directory = "~/Working_Chronos/Cronos/" #<--- CHANGE ACCORDINGLY !!! 
 
 # Please give the file name of the normalized OTU-table without taxonomic classification
 input_otu = "SOTUs-Table.tab"           #<--- CHANGE ACCORDINGLY !!!
@@ -664,8 +663,8 @@ if (new_run==T || (new_run == F & action =='Continue')){
   Class_clusters <- taxa_per_cluster(Class_matrix,samples_on_clusters = samples_on_clusters, timepoint_list = timepoint_list)
   Order_clusters <- taxa_per_cluster(Order_matrix,samples_on_clusters = samples_on_clusters, timepoint_list = timepoint_list)
   Family_clusters <-taxa_per_cluster(Family_matrix,samples_on_clusters = samples_on_clusters, timepoint_list = timepoint_list)
-
   
+
   samples_on_clusters = samples_on_clusters[,names(timepoint_list)[names(timepoint_list)!='ot']]
   samples_on_clusters = samples_on_clusters[,c(as.character(sort(as.numeric(colnames(samples_on_clusters)[colnames(samples_on_clusters)!=External_Reference_Point]),decreasing = F,na.last = T)),External_Reference_Point)]
   
@@ -838,7 +837,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
           test_set_predictions <- prediction_model %>% predict(testset)
           acc[j] = (sum(test_set_predictions == testset[,1])/ nrow(testset)) *100
           tra[j] = (sum(test_set_predictions == trainset[,1])/nrow(trainset))*100
-    
+          
         }
       }
       return (c(mean(tra),mean(acc)))
@@ -1354,7 +1353,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
   
   
   ###################### Barplots of Accuracies ############################################
-
+  
   # Counting indices
   row <- 1 ; column <- 0
   
@@ -1477,7 +1476,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
       xlab("Timepoints")+
       coord_fixed()+
       geom_text(aes(X, Y, label = round(Value,2)), color = "black", size = 6) +
-      theme(plot.title = element_text(hjust = 0.5,size=40, face = "bold"),
+      theme(plot.title = element_text(hjust = 0.5,size=20, face = "bold"),
             legend.box.just = "left",
             axis.text.x = element_text(size = 20, face = "bold"),
             axis.text.y = element_text(size = 20, face = "bold"),
@@ -1677,7 +1676,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
   }
   
   
-  write.csv(final_table,file = paste(output_dir,'Updated Metadata Table.tab',sep = '/'),sep = '\t',row.names = T, col.names = T)
+  write.table(final_table,file = paste(output_dir,'Updated Metadata Table.tab',sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
   
   ###################### Perform Chi-square analysis to check metadata influence on T0 #####################
   
@@ -1729,7 +1728,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
     Significant_metadata = colnames(meta_file)[3:ncol(meta_file)][Significant_metadata]
   }
   
-
+  
   print (paste('The transitions among timepoints ',ifelse(test = Markovian_property, yes = 'are Markovian', no = 'are NOT Markovian'),sep = ' '))
   print (paste('For the clustering fate on the first timepoint', paste(ifelse(test = Significant_metadata, yes = Significant_metadata, no = 'No'), 'metadata are significant.', sep = ' '), sep = ' '))
   print (' Analysis Completed ')
