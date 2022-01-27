@@ -33,6 +33,13 @@ External_Reference_Point = 'MM'              #<--- CHANGE ACCORDINGLY
 # Must be over 1
 splitting_times = 2                           # <---- CHANGE ACCORDINGLY
 
+# Please select the minimum threshold for representation. Families, Orders and Classes
+# below that threshold will be plotted as Others
+# Note that this will be translated as percentage
+# Default is 5% denoted as 0.05
+threshold = 0.05                              # <---- CHANGE ACCORDINGLY
+
+
 # Please select the action Cronos should do if the same parameters are already used for analysis before
 # It can be either 'Continue' or 'Stop'.
 action = 'Continue'                           # <---- CHANGE ACCORDINGLY
@@ -60,9 +67,9 @@ date_of_run = paste(date_of_run,collapse = '_')
 date_of_run= gsub(pattern = ':', replacement = '_', x = date_of_run)
 output_dir = paste('Cronos',date_of_run,sep ='_')
 # Create a log file with all the parameters used
-parameters = matrix('',ncol = 1 ,nrow = 5)
-rownames(parameters) = c('input_meta','input_tree','input_otu','External_Reference_Point','splitting_times')
-parameters[,1]= c(input_meta,input_tree,input_otu,External_Reference_Point,splitting_times)
+parameters = matrix('',ncol = 1 ,nrow = 6)
+rownames(parameters) = c('input_meta','input_tree','input_otu','External_Reference_Point','splitting_times','threshold')
+parameters[,1]= c(input_meta,input_tree,input_otu,External_Reference_Point,splitting_times,threshold)
 
 # Checking whether Cronos was run before with the same parameters
 new_run = T
@@ -1322,6 +1329,11 @@ if (new_run==T || (new_run == F & action =='Continue')){
   Npredictions = Npredictions +1
   
   ###################### Write files of All Calculated Accuracies ############################################
+  
+  
+  # Create a directory wherre the acuuracy related files will be placed
+  dir.create(paste(output_dir,"Accuracies",sep = '/'),showWarnings = F)
+  
   rownames(Train_sets_stratified_split) = Train_sets_stratified_split[,1]
   rownames(Train_sets_LOO)= Train_sets_LOO[,1]
   rownames(Test_sets_LOO) = Test_sets_LOO[,1]
@@ -1335,18 +1347,14 @@ if (new_run==T || (new_run == F & action =='Continue')){
   colnames(Test_sets_LOO)  = c(paste('From timepoint ',rev(colnames(dataset_full)[1:ncol(dataset_full)-1]),sep = ''))
   colnames(Train_sets_stratified_split) = c(paste('From timepoint ',rev(colnames(dataset_full)[1:ncol(dataset_full)-1]),sep = ''))
   colnames(Test_sets_stratified_split)  = c(paste('From timepoint ',rev(colnames(dataset_full)[1:ncol(dataset_full)-1]),sep = ''))
-  write.table(x = Train_sets_LOO, file = paste(output_dir,'All Accuracies of Training Sets LOO.tab', sep = '/') , sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
-  write.table(x = Test_sets_LOO,  file = paste(output_dir,'All Accuracies of Test Sets LOO.tab',     sep = '/') , sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
-  write.table(x = Train_sets_stratified_split, file = paste(output_dir,'All Accuracies of Training Sets Splitted.tab', sep = '/') , sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
-  write.table(x = Test_sets_stratified_split,  file = paste(output_dir,'All Accuracies of Test Sets Splitted.tab', sep = '/')  , sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
+  write.table(x = Train_sets_LOO, file = paste(output_dir,'Accuracies/All Accuracies of Training Sets LOO.tab', sep = '/') , sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
+  write.table(x = Test_sets_LOO,  file = paste(output_dir,'Accuracies/All Accuracies of Test Sets LOO.tab',     sep = '/') , sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
+  write.table(x = Train_sets_stratified_split, file = paste(output_dir,'Accuracies/All Accuracies of Training Sets Splitted.tab', sep = '/') , sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
+  write.table(x = Test_sets_stratified_split,  file = paste(output_dir,'Accuracies/All Accuracies of Test Sets Splitted.tab', sep = '/')  , sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
   
   
   ###################### Barplots of Accuracies ############################################
-  
-  # Create a directory wherre the acuuracy related files will be placed
-  dir.create(paste(output_dir,"Accuracies",sep = '/'),showWarnings = F)
-  
-  
+
   # Counting indices
   row <- 1 ; column <- 0
   
@@ -1500,6 +1508,104 @@ if (new_run==T || (new_run == F & action =='Continue')){
   
   random_estimator = 100/rev(apply (X = dataset_full,MARGIN = 2,FUN = function(x){max(x,na.rm = T)}))
   
+  ###################### Plot Cluster Profiles on Higher Resolutions ##########################################
+  
+  ## Plot Families on Clusters
+  Families = Family_clusters[apply(X = Family_clusters, 1,FUN = max)>threshold,]
+  Others = colSums(Family_clusters[!apply(X = Family_clusters, 1,FUN = max)>threshold,])
+  Family_representation= rbind(Families,Others)
+  
+  
+  v1=c()
+  v2=c()
+  v3=c()
+  for (row in rownames(Family_representation)){
+    for (col in colnames(Family_representation)){
+      v1=c(v1,gsub('Timepoint', 'TP', gsub('cluster', 'Cl',col)))
+      v2=c(v2,row)
+      v3=c(v3,Family_representation[row,col])
+    }
+  }
+  df= data.frame(Cluster=v1,Family = v2,Value=v3)
+  
+  
+  famplot = ggplot(df, aes(fill=Family, y=Value, x=Cluster)) + 
+    geom_bar(position="stack", stat="identity") +
+    ggtitle("Family Representation") +
+    xlab("Cluster")+
+    ylab("Percentage")
+  
+  
+  
+  ggsave(filename = paste(paste(output_dir,'Taxonomic Representation of Clusters',sep='/'),'Families_on_Clusters.pdf',sep = '/'),plot = famplot)
+  jpeg(filename = paste0(output_dir,'/Taxonomic Representation of Clusters/Families_on_Clusters.jpeg'), width = 800,height=842)
+  show(famplot)
+  dev.off()
+  
+  ## Plot Orders on Clusters
+  Orders = Order_clusters[apply(X = Order_clusters, 1,FUN = max)>threshold,]
+  Others = colSums(Order_clusters[!apply(X = Order_clusters, 1,FUN = max)>threshold,])
+  Order_representation= rbind(Orders,Others)
+  
+  
+  v1=c()
+  v2=c()
+  v3=c()
+  for (row in rownames(Order_representation)){
+    for (col in colnames(Order_representation)){
+      v1=c(v1,gsub('Timepoint', 'TP', gsub('cluster', 'Cl',col)))
+      v2=c(v2,row)
+      v3=c(v3,Order_representation[row,col])
+    }
+  }
+  df= data.frame(Cluster=v1,Order = v2,Value=v3)
+  
+  
+  famplot = ggplot(df, aes(fill=Order, y=Value, x=Cluster)) + 
+    geom_bar(position="stack", stat="identity") +
+    ggtitle("Order Representation") +
+    xlab("Cluster")+
+    ylab("Percentage")
+  
+  
+  
+  ggsave(filename = paste(paste(output_dir,'Taxonomic Representation of Clusters',sep='/'),'Orders_on_Clusters.pdf',sep = '/'),plot = famplot)
+  jpeg  (filename = paste(paste(output_dir,'Taxonomic Representation of Clusters',sep='/'),'Orders_on_Clusters.jpeg',sep = '/'),width = 800,height=842)
+  show(famplot)
+  dev.off()
+  
+  ## Plot Classes on Clusters
+  Classes = Class_clusters[apply(X = Class_clusters, 1,FUN = max)>threshold,]
+  Others = colSums(Class_clusters[!apply(X = Class_clusters, 1,FUN = max)>threshold,])
+  Class_representation= rbind(Classes,Others)
+  
+  
+  v1=c()
+  v2=c()
+  v3=c()
+  for (row in rownames(Class_representation)){
+    for (col in colnames(Class_representation)){
+      v1=c(v1,gsub('Timepoint', 'TP', gsub('cluster', 'Cl',col)))
+      v2=c(v2,row)
+      v3=c(v3,Class_representation[row,col])
+    }
+  }
+  df= data.frame(Cluster=v1,Class = v2,Value=v3)
+  
+  
+  famplot = ggplot(df, aes(fill=Class, y=Value, x=Cluster)) + 
+    geom_bar(position="stack", stat="identity") +
+    ggtitle("Class Representation") +
+    xlab("Cluster")+
+    ylab("Percentage")
+  
+  
+  
+  ggsave(filename = paste(paste(output_dir,'Taxonomic Representation of Clusters',sep='/'),'Classes_on_Clusters.pdf',sep = '/'),plot = famplot)
+  jpeg  (filename = paste(paste(output_dir,'Taxonomic Representation of Clusters',sep='/'),'Classes_on_Clusters.jpeg',sep = '/'),width = 800,height=842)
+  show(famplot)
+  dev.off()
+  
   ###################### Write files of Best Accuracies Test_sets_LOO ###########################################
   
   TotimepointIndeces = c(0:ncol(Test_sets_LOO))*Npredictions
@@ -1512,7 +1618,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
     
   }
   write.table(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(dataset_full)[2:ncol(dataset_full)])), c(rev(colnames(dataset_full))[2:ncol(dataset_full)]), sep = ' from Timepoint '),maxaccuracies,metadata,random_estimator[1:length(random_estimator)-1]),
-              file = paste(output_dir,'Maximum_Accuracies_of_Test_sets_LOO.tab',sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
+              file = paste(output_dir,'Accuracies/Maximum_Accuracies_of_Test_sets_LOO.tab',sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
   
   
   ###################### Write files of Best Accuracies TestSplits ########################################
@@ -1526,7 +1632,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
     
   }
   write.table(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(dataset_full)[2:ncol(dataset_full)])), c(rev(colnames(dataset_full))[2:ncol(dataset_full)]), sep = ' from Timepoint '),maxaccuracies,metadata,random_estimator[1:length(random_estimator)-1])
-              ,file = paste(output_dir,'Maximum_Accuracies_of_Stratified_Tests.tab',sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
+              ,file = paste(output_dir,'Accuracies/Maximum_Accuracies_of_Stratified_Tests.tab',sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
   
   
   ###################### Write files of Best Accuracies Train_sets_LOO ########################################
@@ -1540,7 +1646,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
     
   }
   write.table(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(dataset_full)[2:ncol(dataset_full)])), c(rev(colnames(dataset_full))[2:ncol(dataset_full)]), sep = ' from Timepoint '),maxaccuracies,metadata,random_estimator[1:length(random_estimator)-1])
-              ,file = paste(output_dir,'Maximum_Accuracies_of_Train_sets_LOO.tab',sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
+              ,file = paste(output_dir,'Accuracies/Maximum_Accuracies_of_Train_sets_LOO.tab',sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
   
   
   ###################### Write files of Best Accuracies TrainSplits ########################################
@@ -1556,7 +1662,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
   }
   
   write.table(x = rbind(paste(paste('Maximum Accuracy for Timepoint', rev(colnames(dataset_full)[2:ncol(dataset_full)])), c(rev(colnames(dataset_full))[2:ncol(dataset_full)]), sep = ' from Timepoint '),maxaccuracies,metadata,random_estimator[1:length(random_estimator)-1]),
-              file = paste(output_dir,'Maximum_Accuracies_of_TrainSplits.tab',sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
+              file = paste(output_dir,'Accuracies/Maximum_Accuracies_of_TrainSplits.tab',sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
   
   
   
