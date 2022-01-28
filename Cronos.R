@@ -3,18 +3,17 @@
 
 ########### PLEASE FOLLOW THE INSTRUCTIONS CAREFULLY #####################################
 
-working_directory <- dirname(rstudioapi::getSourceEditorContext()$path)
 
 # Please set the directory of the script as the working folder (e.g D:/studyname/Data/Chronos/)
 # Note: the path is denoted by forward slash "/".
-#working_directory = "C:/Users/evage/Desktop/cronos_overtime+12" #<--- CHANGE ACCORDINGLY !!!   "~/Working_Chronos/Cronos_Final/"
+working_directory = "~/Working_Chronos/Cronos/" #<--- CHANGE ACCORDINGLY !!!   "~/Working_Chronos/Cronos_Final/"
 
 # Please give the file name of the normalized OTU-table without taxonomic classification
 input_otu = "SOTUs-Table.tab"           #<--- CHANGE ACCORDINGLY !!!
 # Please give the name of the meta-file that contains individual sample information
-input_meta = "Mapping_File_Over+24.tab"                #<--- CHANGE ACCORDINGLY !!!
+input_meta = "Mapping_File.tab"                #<--- CHANGE ACCORDINGLY !!!
 # Please give the name of the phylogenetic tree constructed from the OTU sequences
-input_tree = "SOTUs-NJTree-All.tre"         #<--- CHANGE ACCORDINGLY !!!
+input_tree = "SOTUs-NJTree.tre"         #<--- CHANGE ACCORDINGLY !!!
 
 
 # Please specify if the file contains external data. One example is when analyzing infant data
@@ -1476,7 +1475,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
       xlab("Timepoints")+
       coord_fixed()+
       geom_text(aes(X, Y, label = round(Value,2)), color = "black", size = 6) +
-      theme(plot.title = element_text(hjust = 0.5,size=40, face = "bold"),
+      theme(plot.title = element_text(hjust = 0.5,size=20, face = "bold"),
             legend.box.just = "left",
             axis.text.x = element_text(size = 20, face = "bold"),
             axis.text.y = element_text(size = 20, face = "bold"),
