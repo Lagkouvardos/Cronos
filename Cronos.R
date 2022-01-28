@@ -11,9 +11,9 @@ working_directory = "~/Working_Chronos/Cronos/" #<--- CHANGE ACCORDINGLY !!!
 # Please give the file name of the normalized OTU-table without taxonomic classification
 input_otu = "SOTUs-Table.tab"           #<--- CHANGE ACCORDINGLY !!!
 # Please give the name of the meta-file that contains individual sample information
-input_meta = "Mapping_File_Over+24.tab"                #<--- CHANGE ACCORDINGLY !!!
+input_meta = "Mapping_File.tab"                #<--- CHANGE ACCORDINGLY !!!
 # Please give the name of the phylogenetic tree constructed from the OTU sequences
-input_tree = "SOTUs-NJTree-All.tre"         #<--- CHANGE ACCORDINGLY !!!
+input_tree = "SOTUs-NJTree.tre"         #<--- CHANGE ACCORDINGLY !!!
 
 
 # Please specify if the file contains external data. One example is when analyzing infant data
@@ -106,31 +106,31 @@ if (new_run==T || (new_run == F & action =='Continue')){
   
   
   ############ Express each sample at the selected taxonomy level ##############################
-    
-    taxonomic_levels<- c('Phylum','Class','Order','Family')
-    Phyla_representation= otu_file
-    Class_representation= otu_file
-    Order_representation= otu_file
-    Family_representation= otu_file
-    
-    
-    for (i in row.names(otu_file)){
-      for (taxonomy in 1:4){
-        if (taxonomy==1){
-          Phyla_representation[i,'taxonomy']<-unlist(strsplit(otu_file[i,'taxonomy'], split = ';'))[taxonomy+1]
-        }
-        else if (taxonomy==2){
-          Class_representation[i,'taxonomy']<-unlist(strsplit(otu_file[i,'taxonomy'], split = ';'))[taxonomy+1]
-        }
-        else if (taxonomy==3){
-          Order_representation[i,'taxonomy']<-unlist(strsplit(otu_file[i,'taxonomy'], split = ';'))[taxonomy+1]
-        }
-        else {
-          Family_representation[i,'taxonomy']<-unlist(strsplit(otu_file[i,'taxonomy'], split = ';'))[taxonomy+1]
-        }
+  
+  taxonomic_levels<- c('Phylum','Class','Order','Family')
+  Phyla_representation= otu_file
+  Class_representation= otu_file
+  Order_representation= otu_file
+  Family_representation= otu_file
+  
+  
+  for (i in row.names(otu_file)){
+    for (taxonomy in 1:4){
+      if (taxonomy==1){
+        Phyla_representation[i,'taxonomy']<-unlist(strsplit(otu_file[i,'taxonomy'], split = ';'))[taxonomy+1]
+      }
+      else if (taxonomy==2){
+        Class_representation[i,'taxonomy']<-unlist(strsplit(otu_file[i,'taxonomy'], split = ';'))[taxonomy+1]
+      }
+      else if (taxonomy==3){
+        Order_representation[i,'taxonomy']<-unlist(strsplit(otu_file[i,'taxonomy'], split = ';'))[taxonomy+1]
+      }
+      else {
+        Family_representation[i,'taxonomy']<-unlist(strsplit(otu_file[i,'taxonomy'], split = ';'))[taxonomy+1]
       }
     }
-
+  }
+  
   taxa_matrix<-function(otus_taxonomic,otu_file){
     taxa_selected<- unique(otus_taxonomic[,'taxonomy'])
     
@@ -143,7 +143,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
     }
     return (prop.table(x = taxa,margin = 2))
   }
-
+  
   Phylum_matrix <- taxa_matrix(Phyla_representation,otu_file)
   Phylum_matrix <- data.frame(t(Phylum_matrix))
   Class_matrix <- taxa_matrix(Class_representation, otu_file)
@@ -646,7 +646,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
         taxa_clusters[[paste(as.character(i),as.character(j),sep = ' cluster ')]]= taxa_matrix[medoids[j,i],]
       }
     }
-  
+    
     clustering_taxa <- matrix(0,  nrow = ncol(taxa_matrix), ncol = length(taxa_clusters))
     row.names(clustering_taxa)<- colnames(taxa_matrix)
     colnames(clustering_taxa)<- names(taxa_clusters)
@@ -664,7 +664,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
   Order_clusters <- taxa_per_cluster(Order_matrix,samples_on_clusters = samples_on_clusters, timepoint_list = timepoint_list)
   Family_clusters <-taxa_per_cluster(Family_matrix,samples_on_clusters = samples_on_clusters, timepoint_list = timepoint_list)
   
-
+  
   samples_on_clusters = samples_on_clusters[,names(timepoint_list)[names(timepoint_list)!='ot']]
   samples_on_clusters = samples_on_clusters[,c(as.character(sort(as.numeric(colnames(samples_on_clusters)[colnames(samples_on_clusters)!=External_Reference_Point]),decreasing = F,na.last = T)),External_Reference_Point)]
   
