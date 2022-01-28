@@ -664,7 +664,6 @@ if (new_run==T || (new_run == F & action =='Continue')){
   Class_clusters <- taxa_per_cluster(Class_matrix,samples_on_clusters = samples_on_clusters, timepoint_list = timepoint_list)
   Order_clusters <- taxa_per_cluster(Order_matrix,samples_on_clusters = samples_on_clusters, timepoint_list = timepoint_list)
   Family_clusters <-taxa_per_cluster(Family_matrix,samples_on_clusters = samples_on_clusters, timepoint_list = timepoint_list)
-
   
   samples_on_clusters = samples_on_clusters[,names(timepoint_list)[names(timepoint_list)!='ot']]
   samples_on_clusters = samples_on_clusters[,c(as.character(sort(as.numeric(colnames(samples_on_clusters)[colnames(samples_on_clusters)!=External_Reference_Point]),decreasing = F,na.last = T)),External_Reference_Point)]
@@ -673,7 +672,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
   dataset_full<- samples_on_clusters[is.na(samples_on_clusters[,External_Reference_Point]),1:ncol(samples_on_clusters)-1]
   
   ############ Write comma delimited files with outputs   ####################################
-  
+  colnames(Phyla_clusters)
   colnames(Phyla_clusters)<-lapply(X = colnames(Phyla_clusters), FUN = function(x){paste('Timepoint',x,sep = ' ')})
   colnames(Class_clusters)<-colnames(Phyla_clusters)
   colnames(Order_clusters)<-colnames(Phyla_clusters)
@@ -1519,8 +1518,9 @@ if (new_run==T || (new_run == F & action =='Continue')){
   v1=c()
   v2=c()
   v3=c()
-  for (row in rownames(Family_representation)){
-    for (col in colnames(Family_representation)){
+  for (col in colnames(Family_representation)){
+    for (row in rownames(Family_representation)){
+    
       v1=c(v1,gsub('Timepoint', 'TP', gsub('cluster', 'Cl',col)))
       v2=c(v2,row)
       v3=c(v3,Family_representation[row,col])
@@ -1528,13 +1528,15 @@ if (new_run==T || (new_run == F & action =='Continue')){
   }
   df= data.frame(Cluster=v1,Family = v2,Value=v3)
   
+  df
   
   famplot = ggplot(df, aes(fill=Family, y=Value, x=Cluster)) + 
     geom_bar(position="stack", stat="identity") +
     ggtitle("Family Representation") +
     xlab("Cluster")+
+    coord_flip()+
     ylab("Percentage")
-  
+    
   
   
   ggsave(filename = paste(paste(output_dir,'Taxonomic Representation of Clusters',sep='/'),'Families_on_Clusters.pdf',sep = '/'),plot = famplot)
@@ -1551,8 +1553,9 @@ if (new_run==T || (new_run == F & action =='Continue')){
   v1=c()
   v2=c()
   v3=c()
-  for (row in rownames(Order_representation)){
-    for (col in colnames(Order_representation)){
+  for (col in colnames(Order_representation)){
+    for (row in rownames(Order_representation)){
+
       v1=c(v1,gsub('Timepoint', 'TP', gsub('cluster', 'Cl',col)))
       v2=c(v2,row)
       v3=c(v3,Order_representation[row,col])
@@ -1565,6 +1568,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
     geom_bar(position="stack", stat="identity") +
     ggtitle("Order Representation") +
     xlab("Cluster")+
+    coord_flip()+
     ylab("Percentage")
   
   
@@ -1583,8 +1587,9 @@ if (new_run==T || (new_run == F & action =='Continue')){
   v1=c()
   v2=c()
   v3=c()
-  for (row in rownames(Class_representation)){
-    for (col in colnames(Class_representation)){
+  for (col in colnames(Class_representation)){  
+    for (row in rownames(Class_representation)){
+  
       v1=c(v1,gsub('Timepoint', 'TP', gsub('cluster', 'Cl',col)))
       v2=c(v2,row)
       v3=c(v3,Class_representation[row,col])
@@ -1597,6 +1602,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
     geom_bar(position="stack", stat="identity") +
     ggtitle("Class Representation") +
     xlab("Cluster")+
+    coord_flip()+
     ylab("Percentage")
   
   
@@ -1675,9 +1681,10 @@ if (new_run==T || (new_run == F & action =='Continue')){
     Meta_with_cluster_assignment = cbind(samples_on_timepoint,Cluster)
     final_table= rbind(final_table,Meta_with_cluster_assignment)
   }
+  final_table= cbind(rownames(final_table), final_table)
   
-  
-  write.csv(final_table,file = paste(output_dir,'Updated Metadata Table.tab',sep = '/'),sep = '\t',row.names = T, col.names = T)
+  colnames(final_table)=c('UniqueID',colnames(meta_file),'Cluster')
+  write.table(final_table,file = paste(output_dir,'Updated Metadata Table.tab',sep = '/'),sep = '\t',row.names = F, col.names = T, quote = F)
   
   ###################### Perform Chi-square analysis to check metadata influence on T0 #####################
   
