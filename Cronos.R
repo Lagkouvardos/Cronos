@@ -6,7 +6,7 @@
 
 # Please set the directory of the script as the working folder (e.g D:/studyname/Data/Chronos/)
 # Note: the path is denoted by forward slash "/".
-working_directory = "~/Working_Chronos/Cronos/" #<--- CHANGE ACCORDINGLY !!!   "~/Working_Chronos/Cronos_Final/"
+working_directory = "~/Working_Chronos/Cronos/" #<--- CHANGE ACCORDINGLY !!!   
 
 # Please give the file name of the normalized OTU-table without taxonomic classification
 input_otu = "SOTUs-Table.tab"           #<--- CHANGE ACCORDINGLY !!!
@@ -1514,9 +1514,22 @@ if (new_run==T || (new_run == F & action =='Continue')){
   Family_representation= rbind(Families,Others)
   
   
+  v4=c()
+  
+  
+  for (i in colnames(samples_on_clusters)){
+    for (j in 1:max(samples_on_clusters[,i],na.rm = T)){
+      v4=c(v4,paste("TP",i,"Cl",j))
+    }
+  }
+  v4 <- factor(v4,levels = unique(v4))
+  
+  
+  
   v1=c()
   v2=c()
   v3=c()
+
   for (col in colnames(Family_representation)){
     for (row in rownames(Family_representation)){
     
@@ -1525,9 +1538,11 @@ if (new_run==T || (new_run == F & action =='Continue')){
       v3=c(v3,Family_representation[row,col])
     }
   }
+
   df= data.frame(Cluster=v1,Family = v2,Value=v3)
+  df$Cluster<- factor(df$Cluster, levels=v4)
   
-  df
+  
   
   famplot = ggplot(df, aes(fill=Family, y=Value, x=Cluster)) + 
     geom_bar(position="stack", stat="identity") +
@@ -1560,7 +1575,9 @@ if (new_run==T || (new_run == F & action =='Continue')){
       v3=c(v3,Order_representation[row,col])
     }
   }
+  
   df= data.frame(Cluster=v1,Order = v2,Value=v3)
+  df$Cluster<- factor(df$Cluster,levels=v4)
   
   
   famplot = ggplot(df, aes(fill=Order, y=Value, x=Cluster)) + 
@@ -1594,8 +1611,9 @@ if (new_run==T || (new_run == F & action =='Continue')){
       v3=c(v3,Class_representation[row,col])
     }
   }
-  df= data.frame(Cluster=v1,Class = v2,Value=v3)
   
+  df= data.frame(Cluster=v1,Class = v2,Value=v3)
+  df$Cluster<- factor(df$Cluster,levels=v4)
   
   famplot = ggplot(df, aes(fill=Class, y=Value, x=Cluster)) + 
     geom_bar(position="stack", stat="identity") +
