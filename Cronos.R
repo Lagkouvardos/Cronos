@@ -3,17 +3,18 @@
 
 ########### PLEASE FOLLOW THE INSTRUCTIONS CAREFULLY #####################################
 
+working_directory <- dirname(rstudioapi::getSourceEditorContext()$path)
 
 # Please set the directory of the script as the working folder (e.g D:/studyname/Data/Chronos/)
 # Note: the path is denoted by forward slash "/".
-working_directory = "~/Working_Chronos/Cronos/" #<--- CHANGE ACCORDINGLY !!!   
+#working_directory = "C:/Users/evage/Desktop/cronos_overtime+12" #<--- CHANGE ACCORDINGLY !!!   "~/Working_Chronos/Cronos_Final/"
 
 # Please give the file name of the normalized OTU-table without taxonomic classification
 input_otu = "SOTUs-Table.tab"           #<--- CHANGE ACCORDINGLY !!!
 # Please give the name of the meta-file that contains individual sample information
-input_meta = "Mapping_File.tab"                #<--- CHANGE ACCORDINGLY !!!
+input_meta = "Mapping_File_Over+24.tab"                #<--- CHANGE ACCORDINGLY !!!
 # Please give the name of the phylogenetic tree constructed from the OTU sequences
-input_tree = "SOTUs-NJTree.tre"         #<--- CHANGE ACCORDINGLY !!!
+input_tree = "SOTUs-NJTree-All.tre"         #<--- CHANGE ACCORDINGLY !!!
 
 
 # Please specify if the file contains external data. One example is when analyzing infant data
@@ -637,18 +638,18 @@ if (new_run==T || (new_run == F & action =='Continue')){
   
   ############ Specify taxa on clusters #################################################
   
-  taxa_per_cluster <- function(taxa_matrix,samples_on_clusters,timepoint_list){
+  taxa_per_cluster <- function(Family_matrix_matrix,samples_on_clusters,timepoint_list){
     taxa_clusters <- list()
-    for (i in colnames(samples_on_clusters)){
+    for (i in c(tps, External_Reference_Point)){
       for (j in min(samples_on_clusters[,i], na.rm = T):max(samples_on_clusters[,i],na.rm = T)){
         timiclj = samples_on_clusters[!is.na(samples_on_clusters[,i]),i]
         metatimepoint= meta_file[meta_file[,"Timepoint"]==i,]
-        taxa_clusters[[paste(as.character(i),as.character(j),sep = ' cluster ')]]= taxa_matrix[medoids[j,i],]
+        taxa_clusters[[paste(as.character(i),as.character(j),sep = ' cluster ')]]= Family_matrix[medoids[j,i],]
       }
     }
   
-    clustering_taxa <- matrix(0,  nrow = ncol(taxa_matrix), ncol = length(taxa_clusters))
-    row.names(clustering_taxa)<- colnames(taxa_matrix)
+    clustering_taxa <- matrix(0,  nrow = ncol(Family_matrix), ncol = length(taxa_clusters))
+    row.names(clustering_taxa)<- colnames(Family_matrix)
     colnames(clustering_taxa)<- names(taxa_clusters)
     
     for (i in colnames(clustering_taxa)){
@@ -671,7 +672,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
   dataset_full<- samples_on_clusters[is.na(samples_on_clusters[,External_Reference_Point]),1:ncol(samples_on_clusters)-1]
   
   ############ Write comma delimited files with outputs   ####################################
-  colnames(Phyla_clusters)
+  
   colnames(Phyla_clusters)<-lapply(X = colnames(Phyla_clusters), FUN = function(x){paste('Timepoint',x,sep = ' ')})
   colnames(Class_clusters)<-colnames(Phyla_clusters)
   colnames(Order_clusters)<-colnames(Phyla_clusters)
@@ -1475,7 +1476,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
       xlab("Timepoints")+
       coord_fixed()+
       geom_text(aes(X, Y, label = round(Value,2)), color = "black", size = 6) +
-      theme(plot.title = element_text(hjust = 0.5,size=20, face = "bold"),
+      theme(plot.title = element_text(hjust = 0.5,size=40, face = "bold"),
             legend.box.just = "left",
             axis.text.x = element_text(size = 20, face = "bold"),
             axis.text.y = element_text(size = 20, face = "bold"),
@@ -1513,23 +1514,9 @@ if (new_run==T || (new_run == F & action =='Continue')){
   Others = colSums(Family_clusters[!apply(X = Family_clusters, 1,FUN = max)>threshold,])
   Family_representation= rbind(Families,Others)
   
-  
-  v4=c()
-  
-  
-  for (i in colnames(samples_on_clusters)){
-    for (j in 1:max(samples_on_clusters[,i],na.rm = T)){
-      v4=c(v4,paste("TP",i,"Cl",j))
-    }
-  }
-  v4 <- factor(v4,levels = unique(v4))
-  
-  
-  
   v1=c()
   v2=c()
   v3=c()
-
   for (col in colnames(Family_representation)){
     for (row in rownames(Family_representation)){
     
@@ -1538,26 +1525,27 @@ if (new_run==T || (new_run == F & action =='Continue')){
       v3=c(v3,Family_representation[row,col])
     }
   }
-
   df= data.frame(Cluster=v1,Family = v2,Value=v3)
-  df$Cluster<- factor(df$Cluster, levels=v4)
   
   
+  df$Cluster = factor(df$Cluster, levels = unique(df$Cluster))
   
-  famplot = ggplot(df, aes(fill=Family, y=Value, x=Cluster)) + 
+  famplot = ggplot(df, aes(fill=Family, y=Value, x =reorder(x = Cluster,X = df$Cluster,order = df$Cluster)))+ 
     geom_bar(position="stack", stat="identity") +
     ggtitle("Family Representation") +
     xlab("Cluster")+
     coord_flip()+
     ylab("Percentage")
     
-  
+
+
   
   ggsave(filename = paste(paste(output_dir,'Taxonomic Representation of Clusters',sep='/'),'Families_on_Clusters.pdf',sep = '/'),plot = famplot)
   jpeg(filename = paste0(output_dir,'/Taxonomic Representation of Clusters/Families_on_Clusters.jpeg'), width = 800,height=842)
   show(famplot)
   dev.off()
   
+
   ## Plot Orders on Clusters
   Orders = Order_clusters[apply(X = Order_clusters, 1,FUN = max)>threshold,]
   Others = colSums(Order_clusters[!apply(X = Order_clusters, 1,FUN = max)>threshold,])
@@ -1575,12 +1563,11 @@ if (new_run==T || (new_run == F & action =='Continue')){
       v3=c(v3,Order_representation[row,col])
     }
   }
-  
   df= data.frame(Cluster=v1,Order = v2,Value=v3)
-  df$Cluster<- factor(df$Cluster,levels=v4)
+  df$Cluster = factor(df$Cluster, levels = unique(df$Cluster))
   
   
-  famplot = ggplot(df, aes(fill=Order, y=Value, x=Cluster)) + 
+  famplot = ggplot(df, aes(fill=Order, y=Value, x=reorder(x = Cluster,X = df$Cluster,order = df$Cluster))) + 
     geom_bar(position="stack", stat="identity") +
     ggtitle("Order Representation") +
     xlab("Cluster")+
@@ -1611,11 +1598,11 @@ if (new_run==T || (new_run == F & action =='Continue')){
       v3=c(v3,Class_representation[row,col])
     }
   }
-  
   df= data.frame(Cluster=v1,Class = v2,Value=v3)
-  df$Cluster<- factor(df$Cluster,levels=v4)
+  df$Cluster = factor(df$Cluster, levels = unique(df$Cluster))
   
-  famplot = ggplot(df, aes(fill=Class, y=Value, x=Cluster)) + 
+  
+  famplot = ggplot(df, aes(fill=Class, y=Value, x =reorder(x = Cluster,X = df$Cluster,order = df$Cluster))) + 
     geom_bar(position="stack", stat="identity") +
     ggtitle("Class Representation") +
     xlab("Cluster")+
