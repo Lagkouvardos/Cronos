@@ -117,80 +117,21 @@ if (new_run==T || (new_run == F & action =='Continue')){
     
     for (i in row.names(otu_file)){
       for (taxonomy in 1:4){
-        
         if (taxonomy==1){
           Phyla_representation[i,'taxonomy']<-unlist(strsplit(otu_file[i,'taxonomy'], split = ';'))[taxonomy+1]
-          
-          if (Phyla_representation[i,'taxonomy']==""){
-            
-            # Split taxonomic information in its taxonomic classes
-            splitTax <- strsplit(otu_file[i,'taxonomy'], split = ';')
-            
-            # Save the position where the first empty string (sequence of characters) occurs
-            value <- which(splitTax[[1]] == "")[1]
-            
-            # Save the last known taxa information
-            lastTaxa = splitTax[[1]][value - 1]
-            
-            # Replace all empty values by the last taxa information and the prefix "unknown_"
-            Phyla_representation[i,'taxonomy'] <-replace(splitTax[[1]],splitTax[[1]] == "",paste0("unknown_",lastTaxa))[taxonomy+1]
-          }
-        } else if (taxonomy==2){
+        }
+        else if (taxonomy==2){
           Class_representation[i,'taxonomy']<-unlist(strsplit(otu_file[i,'taxonomy'], split = ';'))[taxonomy+1]
-          
-          if (Class_representation[i,'taxonomy']==""){
-            
-            # Split taxonomic information in its taxonomic classes
-            splitTax <- strsplit(otu_file[i,'taxonomy'], split = ';')
-            
-            # Save the position where the first empty string (sequence of characters) occurs
-            value <- which(splitTax[[1]] == "")[1]
-            
-            # Save the last known taxa information
-            lastTaxa = splitTax[[1]][value - 1]
-            
-            # Replace all empty values by the last taxa information and the prefix "unknown_"
-            Class_representation[i,'taxonomy'] <-replace(splitTax[[1]],splitTax[[1]] == "",paste0("unknown_",lastTaxa))[taxonomy+1]
-          }
-        } else if (taxonomy==3){
+        }
+        else if (taxonomy==3){
           Order_representation[i,'taxonomy']<-unlist(strsplit(otu_file[i,'taxonomy'], split = ';'))[taxonomy+1]
-          
-          if (Order_representation[i,'taxonomy']==""){
-            
-            # Split taxonomic information in its taxonomic classes
-            splitTax <- strsplit(otu_file[i,'taxonomy'], split = ';')
-            
-            # Save the position where the first empty string (sequence of characters) occurs
-            value <- which(splitTax[[1]] == "")[1]
-            
-            # Save the last known taxa information
-            lastTaxa = splitTax[[1]][value - 1]
-            
-            # Replace all empty values by the last taxa information and the prefix "unknown_"
-            Order_representation[i,'taxonomy'] <-replace(splitTax[[1]],splitTax[[1]] == "",paste0("unknown_",lastTaxa))[taxonomy+1]
-          }
-        } else {
+        }
+        else {
           Family_representation[i,'taxonomy']<-unlist(strsplit(otu_file[i,'taxonomy'], split = ';'))[taxonomy+1]
-          
-          if (Family_representation[i,'taxonomy']==""){
-            
-            # Split taxonomic information in its taxonomic classes
-            splitTax <- strsplit(otu_file[i,'taxonomy'], split = ';')
-            
-            # Save the position where the first empty string (sequence of characters) occurs
-            value <- which(splitTax[[1]] == "")[1]
-            
-            # Save the last known taxa information
-            lastTaxa = splitTax[[1]][value - 1]
-            
-            # Replace all empty values by the last taxa information and the prefix "unknown_"
-            Family_representation[i,'taxonomy']<- replace(splitTax[[1]],splitTax[[1]] == "",paste0("unknown_",lastTaxa))[taxonomy+1]
-          }
         }
       }
     }
 
-    
   taxa_matrix<-function(otus_taxonomic,otu_file){
     taxa_selected<- unique(otus_taxonomic[,'taxonomy'])
     
@@ -344,11 +285,6 @@ if (new_run==T || (new_run == F & action =='Continue')){
     dir.create(paste(output_dir,"Calinski-Harabasz",sep = '/'),showWarnings = F)
     
     # Export plot with the Calinski-Harabasz scores for each k
-    pdf(paste(paste(output_dir,"Calinski-Harabasz",sep = '/'), paste(paste('Calinski-Harabasz_index',name,sep = ' of Timepoint '),'pdf',sep = ' .'),sep = '/'))
-    plot(2:9,calinski_harabasz_values, type="h", xlab="k clusters", ylab="CH index",main='Calinski-Harabasz scores of different #Clusters')
-    legend("topright", c("PAM"), fill=c("black"))
-    dev.off()
-    
     jpeg(filename =paste(paste(output_dir,"Calinski-Harabasz",sep = '/'), paste(paste('Calinski-Harabasz_index',name,sep = ' of Timepoint '),'jpeg',sep = ' .'),sep = '/'),width = 800,height=842)
     plot(2:9,calinski_harabasz_values, type="h", xlab="k clusters", ylab="CH index",main='Calinski-Harabasz scores of different #Clusters')
     legend("topright", c("PAM"), fill=c("black"))
