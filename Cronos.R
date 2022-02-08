@@ -1,20 +1,22 @@
+
+
+##########################################################################################
 ############ ON THIS SECTION YOU CAN SELECT YOUR DESIRED PARAMETERS ######################
 ##########################################################################################
 
 ########### PLEASE FOLLOW THE INSTRUCTIONS CAREFULLY #####################################
 
-working_directory <- dirname(rstudioapi::getSourceEditorContext()$path)
 
 # Please set the directory of the script as the working folder (e.g D:/studyname/Data/Chronos/)
 # Note: the path is denoted by forward slash "/".
-#working_directory = "C:/Users/evage/Desktop/cronos_overtime+12" #<--- CHANGE ACCORDINGLY !!!   "~/Working_Chronos/Cronos_Final/"
+working_directory = "~/Working_Chronos/Cronos/"  #<--- CHANGE ACCORDINGLY !!!   
 
 # Please give the file name of the normalized OTU-table without taxonomic classification
 input_otu = "SOTUs-Table.tab"           #<--- CHANGE ACCORDINGLY !!!
 # Please give the name of the meta-file that contains individual sample information
-input_meta = "Mapping_File_Over+24.tab"                #<--- CHANGE ACCORDINGLY !!!
+input_meta = "Mapping_File.tab"                #<--- CHANGE ACCORDINGLY !!!
 # Please give the name of the phylogenetic tree constructed from the OTU sequences
-input_tree = "SOTUs-NJTree-All.tre"         #<--- CHANGE ACCORDINGLY !!!
+input_tree = "SOTUs-NJTree.tre"         #<--- CHANGE ACCORDINGLY !!!
 
 
 # Please specify if the file contains external data. One example is when analyzing infant data
@@ -107,31 +109,90 @@ if (new_run==T || (new_run == F & action =='Continue')){
   
   
   ############ Express each sample at the selected taxonomy level ##############################
-    
-    taxonomic_levels<- c('Phylum','Class','Order','Family')
-    Phyla_representation= otu_file
-    Class_representation= otu_file
-    Order_representation= otu_file
-    Family_representation= otu_file
-    
-    
-    for (i in row.names(otu_file)){
-      for (taxonomy in 1:4){
-        if (taxonomy==1){
-          Phyla_representation[i,'taxonomy']<-unlist(strsplit(otu_file[i,'taxonomy'], split = ';'))[taxonomy+1]
+  
+  taxonomic_levels<- c('Phylum','Class','Order','Family')
+  Phyla_representation= otu_file
+  Class_representation= otu_file
+  Order_representation= otu_file
+  Family_representation= otu_file
+  
+  
+  for (i in row.names(otu_file)){
+    for (taxonomy in 1:4){
+      
+      if (taxonomy==1){
+        Phyla_representation[i,'taxonomy']<-unlist(strsplit(otu_file[i,'taxonomy'], split = ';'))[taxonomy+1]
+        
+        if (Phyla_representation[i,'taxonomy']==""){
+          
+          # Split taxonomic information in its taxonomic classes
+          splitTax <- strsplit(otu_file[i,'taxonomy'], split = ';')
+          
+          # Save the position where the first empty string (sequence of characters) occurs
+          value <- which(splitTax[[1]] == "")[1]
+          
+          # Save the last known taxa information
+          lastTaxa = splitTax[[1]][value - 1]
+          
+          # Replace all empty values by the last taxa information and the prefix "unknown_"
+          Phyla_representation[i,'taxonomy'] <-replace(splitTax[[1]],splitTax[[1]] == "",paste0("unknown_",lastTaxa))[taxonomy+1]
         }
-        else if (taxonomy==2){
-          Class_representation[i,'taxonomy']<-unlist(strsplit(otu_file[i,'taxonomy'], split = ';'))[taxonomy+1]
+      } else if (taxonomy==2){
+        Class_representation[i,'taxonomy']<-unlist(strsplit(otu_file[i,'taxonomy'], split = ';'))[taxonomy+1]
+        
+        if (Class_representation[i,'taxonomy']==""){
+          
+          # Split taxonomic information in its taxonomic classes
+          splitTax <- strsplit(otu_file[i,'taxonomy'], split = ';')
+          
+          # Save the position where the first empty string (sequence of characters) occurs
+          value <- which(splitTax[[1]] == "")[1]
+          
+          # Save the last known taxa information
+          lastTaxa = splitTax[[1]][value - 1]
+          
+          # Replace all empty values by the last taxa information and the prefix "unknown_"
+          Class_representation[i,'taxonomy'] <-replace(splitTax[[1]],splitTax[[1]] == "",paste0("unknown_",lastTaxa))[taxonomy+1]
         }
-        else if (taxonomy==3){
-          Order_representation[i,'taxonomy']<-unlist(strsplit(otu_file[i,'taxonomy'], split = ';'))[taxonomy+1]
+      } else if (taxonomy==3){
+        Order_representation[i,'taxonomy']<-unlist(strsplit(otu_file[i,'taxonomy'], split = ';'))[taxonomy+1]
+        
+        if (Order_representation[i,'taxonomy']==""){
+          
+          # Split taxonomic information in its taxonomic classes
+          splitTax <- strsplit(otu_file[i,'taxonomy'], split = ';')
+          
+          # Save the position where the first empty string (sequence of characters) occurs
+          value <- which(splitTax[[1]] == "")[1]
+          
+          # Save the last known taxa information
+          lastTaxa = splitTax[[1]][value - 1]
+          
+          # Replace all empty values by the last taxa information and the prefix "unknown_"
+          Order_representation[i,'taxonomy'] <-replace(splitTax[[1]],splitTax[[1]] == "",paste0("unknown_",lastTaxa))[taxonomy+1]
         }
-        else {
-          Family_representation[i,'taxonomy']<-unlist(strsplit(otu_file[i,'taxonomy'], split = ';'))[taxonomy+1]
+      } else {
+        Family_representation[i,'taxonomy']<-unlist(strsplit(otu_file[i,'taxonomy'], split = ';'))[taxonomy+1]
+        
+        if (Family_representation[i,'taxonomy']==""){
+          
+          # Split taxonomic information in its taxonomic classes
+          splitTax <- strsplit(otu_file[i,'taxonomy'], split = ';')
+          
+          # Save the position where the first empty string (sequence of characters) occurs
+          value <- which(splitTax[[1]] == "")[1]
+          
+          # Save the last known taxa information
+          lastTaxa = splitTax[[1]][value - 1]
+          
+          # Replace all empty values by the last taxa information and the prefix "unknown_"
+          Family_representation[i,'taxonomy']<- replace(splitTax[[1]],splitTax[[1]] == "",paste0("unknown_",lastTaxa))[taxonomy+1]
         }
       }
     }
-
+  }
+  
+  
   taxa_matrix<-function(otus_taxonomic,otu_file){
     taxa_selected<- unique(otus_taxonomic[,'taxonomy'])
     
@@ -144,7 +205,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
     }
     return (prop.table(x = taxa,margin = 2))
   }
-
+  
   Phylum_matrix <- taxa_matrix(Phyla_representation,otu_file)
   Phylum_matrix <- data.frame(t(Phylum_matrix))
   Class_matrix <- taxa_matrix(Class_representation, otu_file)
@@ -285,6 +346,11 @@ if (new_run==T || (new_run == F & action =='Continue')){
     dir.create(paste(output_dir,"Calinski-Harabasz",sep = '/'),showWarnings = F)
     
     # Export plot with the Calinski-Harabasz scores for each k
+    pdf(paste(paste(output_dir,"Calinski-Harabasz",sep = '/'), paste(paste('Calinski-Harabasz_index',name,sep = ' of Timepoint '),'pdf',sep = ' .'),sep = '/'))
+    plot(2:9,calinski_harabasz_values, type="h", xlab="k clusters", ylab="CH index",main='Calinski-Harabasz scores of different #Clusters')
+    legend("topright", c("PAM"), fill=c("black"))
+    dev.off()
+    
     jpeg(filename =paste(paste(output_dir,"Calinski-Harabasz",sep = '/'), paste(paste('Calinski-Harabasz_index',name,sep = ' of Timepoint '),'jpeg',sep = ' .'),sep = '/'),width = 800,height=842)
     plot(2:9,calinski_harabasz_values, type="h", xlab="k clusters", ylab="CH index",main='Calinski-Harabasz scores of different #Clusters')
     legend("topright", c("PAM"), fill=c("black"))
@@ -638,18 +704,18 @@ if (new_run==T || (new_run == F & action =='Continue')){
   
   ############ Specify taxa on clusters #################################################
   
-  taxa_per_cluster <- function(Family_matrix_matrix,samples_on_clusters,timepoint_list){
+  taxa_per_cluster <- function(taxa_repr_matrix,samples_on_clusters,timepoint_list){
     taxa_clusters <- list()
     for (i in c(tps, External_Reference_Point)){
       for (j in min(samples_on_clusters[,i], na.rm = T):max(samples_on_clusters[,i],na.rm = T)){
         timiclj = samples_on_clusters[!is.na(samples_on_clusters[,i]),i]
         metatimepoint= meta_file[meta_file[,"Timepoint"]==i,]
-        taxa_clusters[[paste(as.character(i),as.character(j),sep = ' cluster ')]]= Family_matrix[medoids[j,i],]
+        taxa_clusters[[paste(as.character(i),as.character(j),sep = ' cluster ')]]= taxa_repr_matrix[medoids[j,i],]
       }
     }
-  
-    clustering_taxa <- matrix(0,  nrow = ncol(Family_matrix), ncol = length(taxa_clusters))
-    row.names(clustering_taxa)<- colnames(Family_matrix)
+    
+    clustering_taxa <- matrix(0,  nrow = ncol(taxa_repr_matrix), ncol = length(taxa_clusters))
+    row.names(clustering_taxa)<- colnames(taxa_repr_matrix)
     colnames(clustering_taxa)<- names(taxa_clusters)
     
     for (i in colnames(clustering_taxa)){
@@ -837,7 +903,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
           test_set_predictions <- prediction_model %>% predict(testset)
           acc[j] = (sum(test_set_predictions == testset[,1])/ nrow(testset)) *100
           tra[j] = (sum(test_set_predictions == trainset[,1])/nrow(trainset))*100
-    
+          
         }
       }
       return (c(mean(tra),mean(acc)))
@@ -1353,7 +1419,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
   
   
   ###################### Barplots of Accuracies ############################################
-
+  
   # Counting indices
   row <- 1 ; column <- 0
   
@@ -1476,7 +1542,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
       xlab("Timepoints")+
       coord_fixed()+
       geom_text(aes(X, Y, label = round(Value,2)), color = "black", size = 6) +
-      theme(plot.title = element_text(hjust = 0.5,size=40, face = "bold"),
+      theme(plot.title = element_text(hjust = 0.5,size=20, face = "bold"),
             legend.box.just = "left",
             axis.text.x = element_text(size = 20, face = "bold"),
             axis.text.y = element_text(size = 20, face = "bold"),
@@ -1519,7 +1585,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
   v3=c()
   for (col in colnames(Family_representation)){
     for (row in rownames(Family_representation)){
-    
+      
       v1=c(v1,gsub('Timepoint', 'TP', gsub('cluster', 'Cl',col)))
       v2=c(v2,row)
       v3=c(v3,Family_representation[row,col])
@@ -1536,16 +1602,16 @@ if (new_run==T || (new_run == F & action =='Continue')){
     xlab("Cluster")+
     coord_flip()+
     ylab("Percentage")
-    
-
-
+  
+  
+  
   
   ggsave(filename = paste(paste(output_dir,'Taxonomic Representation of Clusters',sep='/'),'Families_on_Clusters.pdf',sep = '/'),plot = famplot)
   jpeg(filename = paste0(output_dir,'/Taxonomic Representation of Clusters/Families_on_Clusters.jpeg'), width = 800,height=842)
   show(famplot)
   dev.off()
   
-
+  
   ## Plot Orders on Clusters
   Orders = Order_clusters[apply(X = Order_clusters, 1,FUN = max)>threshold,]
   Others = colSums(Order_clusters[!apply(X = Order_clusters, 1,FUN = max)>threshold,])
@@ -1557,7 +1623,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
   v3=c()
   for (col in colnames(Order_representation)){
     for (row in rownames(Order_representation)){
-
+      
       v1=c(v1,gsub('Timepoint', 'TP', gsub('cluster', 'Cl',col)))
       v2=c(v2,row)
       v3=c(v3,Order_representation[row,col])
@@ -1592,7 +1658,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
   v3=c()
   for (col in colnames(Class_representation)){  
     for (row in rownames(Class_representation)){
-  
+      
       v1=c(v1,gsub('Timepoint', 'TP', gsub('cluster', 'Cl',col)))
       v2=c(v2,row)
       v3=c(v3,Class_representation[row,col])
@@ -1740,7 +1806,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
     Significant_metadata = colnames(meta_file)[3:ncol(meta_file)][Significant_metadata]
   }
   
-
+  
   print (paste('The transitions among timepoints ',ifelse(test = Markovian_property, yes = 'are Markovian', no = 'are NOT Markovian'),sep = ' '))
   print (paste('For the clustering fate on the first timepoint', paste(ifelse(test = Significant_metadata, yes = Significant_metadata, no = 'No'), 'metadata are significant.', sep = ' '), sep = ' '))
   print (' Analysis Completed ')
