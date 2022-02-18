@@ -13,7 +13,7 @@ You can select the working directory (folder), which is the directory (folder) w
 R scripts and files are saved. The R script has the following format:
 
 ```
-# Please set the directory of the script as the working folder (e.g D:/studyname/Data/Chronos/)
+# Please set the directory of the script as the working folder (e.g D:/studyname/Data/Cronos/)
 # Note: the path is denoted by forward slash "/".
 working_directory = "Here_type_the_name_of_the_folder"
 ```
@@ -24,9 +24,9 @@ Next to ‘input_otu’ write the name of the tab separated file containing the 
 Next to ‘input_meta’ write the name of the file that contains individual sample information and the metadata of the samples.
 Next to ‘input_tree’ write the name of the phylogenetic tree constructed from the sequences.
 
-Chronos provides the opportunity to express the clusters that the samples form at a higher taxonomic resolution up to Domain. You can type next to ‘taxonomic_level’ a string denoted by ‘’ signs one of the following: Domain, Phylum, Class, Order or Family. Another option here is to type a number between 1 and 5 respectively. 
+Cronos provides the opportunity to express the clusters that the samples form at a higher taxonomic resolution up to Domain. You can type next to ‘taxonomic_level’ a string denoted by ‘’ signs one of the following: Domain, Phylum, Class, Order or Family. Another option here is to type a number between 1 and 5 respectively. 
 
-Output files and plots produced by Chronos are saved in 4 different directories (folders), within the output directory (folder).
+Output files and plots produced by Cronos are saved in 4 different directories (folders), within the output directory (folder).
 
 Finally, the last variable you need to specify is the times the splitting for train and test sets will be performed next to splitting_times. The final accuracy for the train and the test sets are calculated as an average of the splitting times. The optimal percentage for the splitting and overall performance time of the algorithm will also be determined by this number. The higher this number is, the more time it will take for Cronos to run.
 
@@ -35,7 +35,7 @@ Now, all you need to do is select everything (Ctrl+A) and press Run (Ctrl + Ente
 
 Cronos sections description
 Parameters: 
-This is the file where you select your prefered parameters for Chronos to run. Additionally, files containing the information are specified here and some parameters for the Machine Learning Techniques. 
+This is the file where you select your prefered parameters for Cronos to run. Additionally, files containing the information are specified here and some parameters for the Machine Learning Techniques. 
 
 Clustering:
 This section reads all the files for the analysis (! your files will not be altered) and downloads all the required packages in the R environment in order to run the analysis. Samples are assigned to timepoints and the phylogenetic distances between them are calculated via Unifrac metric. Clustering on a dissimilarity matrix calculated for all samples of every timepoint is performed via PAM (Partitioning Around Medoid) method. 
