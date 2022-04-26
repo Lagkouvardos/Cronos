@@ -41,6 +41,11 @@ splitting_times = 2                           # <---- CHANGE ACCORDINGLY
 # Default is 5% denoted as 0.05
 threshold = 0.05                              # <---- CHANGE ACCORDINGLY
 
+# Please select the method that will be used to calculate the optimal number of clusters for each group
+# 1 = The script will choose the number of clusters based on highest difference between the Calinski-Harabasz values (Default)
+# 2 = The optimal number of clusters will be selected based on the highest Calinski-Harabasz value
+clustering_method <- 1
+
 
 # Please select the action Cronos should do if the same parameters are already used for analysis before
 # It can be either 'Continue' or 'Stop'.
@@ -318,7 +323,16 @@ if (new_run==T || (new_run == F & action =='Continue')){
     optimal_k<- function(unifract_dist, clustering_method){
       calinski_harabasz_values <-c()
       
-      for (k in 2:9){
+      # Check if the number of samples are nine or more
+      if (nrow(unifract_dist) > 9) {
+        # Maximum number of clusters
+        max_cl =9
+      } else {
+        # Maximum number of clusters
+        max_cl = nrow(unifract_dist)-1
+      }
+      
+      for (k in 2:max_cl){
         clustering_results = PAM_clustering(unifract_dist = unifract_dist, k = k)
         clusteringP <- clustering_results[[1]]
         medoids = clustering_results[[2]]
@@ -326,14 +340,18 @@ if (new_run==T || (new_run == F & action =='Continue')){
         calinski_harabasz_values= c(calinski_harabasz_values,(cluster.stats(unifract_dist,clusteringP)[["ch"]]))
       }
       
-      best_delta_score<- which.min(diff(calinski_harabasz_values)) +1
-      highest <- which.max(calinski_harabasz_values) +1
-      if (best_delta_score==highest){
-        best_final_score=highest
-      } else if (calinski_harabasz_values[highest-1]-calinski_harabasz_values[best_delta_score-1] > abs(min(diff(calinski_harabasz_values)))){
-        best_final_score <- highest
-      } else {
-        best_final_score <- best_delta_score
+      if (clustering_method==1){
+        best_delta_score<- which.min(diff(calinski_harabasz_values)) +1
+        highest <- which.max(calinski_harabasz_values) +1
+        if (best_delta_score==highest){
+          best_final_score=highest
+        } else if (calinski_harabasz_values[highest-1]-calinski_harabasz_values[best_delta_score-1] > abs(min(diff(calinski_harabasz_values)))){
+          best_final_score <- highest
+        } else {
+          best_final_score <- best_delta_score
+        }
+      } else if (clustering_method==2){
+        best_final_score <-which.max(calinski_harabasz_values) +1
       }
       return (list(best_final_score, calinski_harabasz_values))
     }
