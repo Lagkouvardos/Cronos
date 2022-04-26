@@ -1,7 +1,7 @@
 
 ![Cronos-logo-v2](https://user-images.githubusercontent.com/8244618/139041662-dc956016-54e9-41b9-bb80-caa91119220a.png)
 
-How to RUN Chronos
+How to RUN Cronos
 
 Firstly, download R Studio (https://www.rstudio.com/) on your computer. 
 Then download the file named Cronos.R. Move the R script and the files to one folder all together.
