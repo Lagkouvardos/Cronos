@@ -920,7 +920,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
           training_set_accuracies <- prediction_model %>% predict(trainset)
           test_set_predictions <- prediction_model %>% predict(testset)
           acc[j] = (sum(test_set_predictions == testset[,1])/ nrow(testset)) *100
-          tra[j] = (sum(test_set_predictions == trainset[,1])/nrow(trainset))*100
+          tra[j] = (sum(training_set_accuracies == trainset[,1])/nrow(trainset))*100
           
         }
       }
@@ -1087,7 +1087,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
               training_set_accuracies <- prediction_model %>% predict(trainset[,2:ncol(trainset)])
               test_set_predictions <- prediction_model %>% predict(testset[,2:ncol(testset)])
               acc[j] = (sum(test_set_predictions == testset[,1])/ nrow(testset)) *100
-              tra[j] = (sum(test_set_predictions == trainset[,1])/nrow(trainset))*100
+              tra[j] = (sum(training_set_accuracies == trainset[,1])/nrow(trainset))*100
               
             }
           }        
@@ -1268,7 +1268,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
           test_set_predictions <- prediction_model %>% predict(testset)
           # Calculate accuracies
           acc[j] = (sum(test_set_predictions == testset[,1])/ nrow(testset)) *100
-          tra[j] = (sum(test_set_predictions == trainset[,1])/nrow(trainset))*100
+          tra[j] = (sum(training_set_accuracies == trainset[,1])/nrow(trainset))*100
           
         }
       }
