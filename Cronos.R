@@ -235,7 +235,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
   
   ############ Checking for and installing packages ####################################
   
-  packages <-c("ade4","dplyr","GUniFrac","phangorn","cluster","fpc","markovchain", 'spgs','caret','nnet','gtools', 'mclust','igraph', 'network','ggplot2','reshape2','easyalluvial','ggrepel', 'vegan') 
+  packages <-c("ade4","dplyr","GUniFrac","devtools","phangorn","cluster","fpc","markovchain", 'spgs','caret','nnet','gtools', 'mclust','igraph', 'network','ggplot2','reshape2','easyalluvial','ggrepel', 'vegan') 
   # Function to check whether the package is installed
   InsPack <- function(pack)
   {
@@ -250,6 +250,10 @@ if (new_run==T || (new_run == F & action =='Continue')){
   lib <- lapply(packages, require, character.only = TRUE)
   # Check if it was possible to install all required libraries
   flag <- all(as.logical(lib))
+  if (("easyalluvial" %in% installed.packages()) == FALSE) {
+    devtools::install_github("erblast/easyalluvial")
+  } 
+  library("easyalluvial")
   
   
   # Load the phylogenetic tree calculated from the OTU sequences 
@@ -421,9 +425,12 @@ if (new_run==T || (new_run == F & action =='Continue')){
       # Performing analysis of variance using the distance matrix(only if individuals=NULL)
       if(nlevels(groups) > 1) {
         # PERMANOVA test
-        adonis = adonis(distance ~ all_groups_comp)
+        adonis = adonis2(distance ~ all_groups_comp)
+        permdisp <- permutest(betadisper(as.dist(distance),as.factor(all_groups_comp),type="median"))
+        
         # Create Subtitle
-        sub = paste("MDS plot of Microbial Profiles\n(p-value ",adonis[[1]][6][[1]][1],")",sep="")
+        sub = paste("MDS plot of Microbial Profiles\nPERMDISP     p=",permdisp[["tab"]][["Pr(>F)"]][1],"\n",
+                    "PERMANOVA  p=",adonis[1,5],sep="")
       } else {
         sub=c("")
       }
@@ -1598,9 +1605,23 @@ if (new_run==T || (new_run == F & action =='Continue')){
   Others = colSums(Family_clusters[!apply(X = Family_clusters, 1,FUN = max)>threshold,])
   Family_representation= rbind(Families,Others)
   
+  
+  v4=c()
+  
+  
+  for (i in colnames(samples_on_clusters)){
+    for (j in 1:max(samples_on_clusters[,i],na.rm = T)){
+      v4=c(v4,paste("TP",i,"Cl",j))
+    }
+  }
+  v4 <- factor(v4,levels = unique(v4))
+  
+  
+  
   v1=c()
   v2=c()
   v3=c()
+  
   for (col in colnames(Family_representation)){
     for (row in rownames(Family_representation)){
       
@@ -1609,12 +1630,13 @@ if (new_run==T || (new_run == F & action =='Continue')){
       v3=c(v3,Family_representation[row,col])
     }
   }
+  
   df= data.frame(Cluster=v1,Family = v2,Value=v3)
+  df$Cluster<- factor(df$Cluster, levels=v4)
   
   
-  df$Cluster = factor(df$Cluster, levels = unique(df$Cluster))
   
-  famplot = ggplot(df, aes(fill=Family, y=Value, x =reorder(x = Cluster,X = df$Cluster,order = df$Cluster)))+ 
+  famplot = ggplot(df, aes(fill=Family, y=Value, x=Cluster)) + 
     geom_bar(position="stack", stat="identity") +
     ggtitle("Family Representation") +
     xlab("Cluster")+
@@ -1623,12 +1645,10 @@ if (new_run==T || (new_run == F & action =='Continue')){
   
   
   
-  
   ggsave(filename = paste(paste(output_dir,'Taxonomic Representation of Clusters',sep='/'),'Families_on_Clusters.pdf',sep = '/'),plot = famplot)
   jpeg(filename = paste0(output_dir,'/Taxonomic Representation of Clusters/Families_on_Clusters.jpeg'), width = 800,height=842)
   show(famplot)
   dev.off()
-  
   
   ## Plot Orders on Clusters
   Orders = Order_clusters[apply(X = Order_clusters, 1,FUN = max)>threshold,]
@@ -1647,11 +1667,12 @@ if (new_run==T || (new_run == F & action =='Continue')){
       v3=c(v3,Order_representation[row,col])
     }
   }
+  
   df= data.frame(Cluster=v1,Order = v2,Value=v3)
-  df$Cluster = factor(df$Cluster, levels = unique(df$Cluster))
+  df$Cluster<- factor(df$Cluster,levels=v4)
   
   
-  famplot = ggplot(df, aes(fill=Order, y=Value, x=reorder(x = Cluster,X = df$Cluster,order = df$Cluster))) + 
+  famplot = ggplot(df, aes(fill=Order, y=Value, x=Cluster)) + 
     geom_bar(position="stack", stat="identity") +
     ggtitle("Order Representation") +
     xlab("Cluster")+
@@ -1682,11 +1703,11 @@ if (new_run==T || (new_run == F & action =='Continue')){
       v3=c(v3,Class_representation[row,col])
     }
   }
+  
   df= data.frame(Cluster=v1,Class = v2,Value=v3)
-  df$Cluster = factor(df$Cluster, levels = unique(df$Cluster))
+  df$Cluster<- factor(df$Cluster,levels=v4)
   
-  
-  famplot = ggplot(df, aes(fill=Class, y=Value, x =reorder(x = Cluster,X = df$Cluster,order = df$Cluster))) + 
+  famplot = ggplot(df, aes(fill=Class, y=Value, x=Cluster)) + 
     geom_bar(position="stack", stat="identity") +
     ggtitle("Class Representation") +
     xlab("Cluster")+
