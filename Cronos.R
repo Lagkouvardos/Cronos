@@ -1,55 +1,118 @@
+#'Script Title: Cronos 
+#'This script was last modified on 10/30/2022
+#'Authors: Aristidis Litos, Evangelia Intze, Ilias Lagkouvardos
+#'
+#'
+#'##############################################################################################
+#'############################### Cronos Script Overview #######################################
+#'############################################################################################## 
+#'
+#' Cronos detects the intrinsic microbial profile clusters on all time points 
+#' describes them in terms of composition, and records the transitions between them.
+#' luster assignments, combined with the provided metadata, are used to model the 
+#' transitions and predict samples’ fate under various effects 
+#'
+#' Input: 
+#' Please enter the following parameters
+#' 1. Set the path to the directory where the files are stored 
+#' 2. Write the name of the OTU table of interest in quotes
+#' 3. Write the name of the mapping file that includes the samples information
+#' 4. Write the name of the phylogenetic tree
+#' 5. Write the name of the column that contains the information about the samples groups 
+#' 6. Write the names of the samples you wish to be excluded from the analysis (Optional)
+#' 7. Write the name of the the column that contain the information about the timepoints
+#' 8. Write the the chronological order of the timepoints (Optional)
+#' 9. Write the name/names of the external data(If included)
+#' 9. Write if you want the external data to be treated as one group
+#'10. Write number of iterations to use for the stratified test split on modeling.
+#'11  Write the minimum threshold for the taxonomic representation
+#'12. Write the method that will be used to calculate the optimal number of clusters for each group
+#'
+#' Output: 
+#' The script generates two reports in pdf format, 3 folder where the results are printed and a mapping file
+#' 1. A folder that contains the transition accuracies
+#' 2. A folder that contains the Calinski-Harabasz plots
+#' 3. A folder with the MDS plots
+#' 4. A folder with the Taxonomic Representation of Clusters
+#' 5. A folder with the Transitions plots
+#' 6. An updated mapping file 
+#' 7. A transition matrix
+#' 
+#'
+#' Concept:
+#' Microbial time-series analysis, typically, examines the abundances of individual taxa over time and 
+#' attempts to assign etiology to observed patterns. However his approach assumes homogeneous groups in 
+#' terms of profiles and response to external effectors. 
+#' Cronos attempt to track the transition of communities, rather than individual taxa. 
+#' 
 
 
 ##########################################################################################
+############                        INITIALIZATION                  ######################
 ############ ON THIS SECTION YOU CAN SELECT YOUR DESIRED PARAMETERS ######################
 ##########################################################################################
 
 ########### PLEASE FOLLOW THE INSTRUCTIONS CAREFULLY #####################################
 
 
-# Please set the directory of the script as the working folder (e.g D:/studyname/Data/Chronos/)
+# Please set the directory of the script as the working folder (e.g D:/studyname/Data/Cronos/)
 # Note: the path is denoted by forward slash "/".
-working_directory = "~/Working_Chronos/Cronos/"  #<--- CHANGE ACCORDINGLY !!!   
+setwd("C:/...../..../Cronos")  #<--- CHANGE ACCORDINGLY !!!  
 
-# Please give the file name of the normalized OTU-table without taxonomic classification
+# Please give the file name of the normalized OTU-table
 input_otu = "SOTUs-Table.tab"           #<--- CHANGE ACCORDINGLY !!!
-# Please give the name of the meta-file that contains individual sample information
+
+# Please provide the name of the meta-file that contains individual sample information
 input_meta = "Mapping_File.tab"                #<--- CHANGE ACCORDINGLY !!!
+
 # Please give the name of the phylogenetic tree constructed from the OTU sequences
 input_tree = "SOTUs-NJTree.tre"         #<--- CHANGE ACCORDINGLY !!!
 
+# Please provide the column name of the mapping file that contains the information about the samples groups
+Samples_column= "Sample"
 
-# Please specify if the file contains external data. One example is when analyzing infant data
-# but have an OTU table for adults as well for a reference. 
-# If it contains external timepoint, please specify the name of the column 
-# (i.e. timepoint name) where they are saved
-# If it doesn't, leave it blank (like this: '' ).
-External_Reference_Point = 'MM'              #<--- CHANGE ACCORDINGLY
+# OPTIONAL: Please specify if there are samples that will not be used in the analysis (e.g Exclude_samples=c("11","12"))
+# The names should be identical to those of the Samples_column
+Exclude_samples=c()
+
+# Please provide the name of the column of the mapping file that contains the information about the timepoints
+Timepoints_column= "Timepoint"
+
+# OPTIONAL: Please provide the chronological order of the timepoints
+# In case you do not specify the order of the timepoints, all the unique timepoints of the Timepoints_column will be sorted alphabetically
+Timepoints_order =c()
+
+# OPTIONAL: Please specify if the file contains external data.
+# Provide the timepoints indexes as they appear in the Timepoints_column
+# You can enter more than one groups (e.g External_Reference_Point = c('a',"b"))
+# Enter: External_Reference_Point = c() in case you do not have external data 
+External_Reference_Point = c('MM')              #<--- CHANGE ACCORDINGLY
+
+# OPTIONAL: In case you have more than one external groups. Specify if you want to be treated as one group
+# Enter: "YES" if you want to be unified
+# Enter: "NO" if you want to analyzed separately
+Unified = "NO"
 
 
-# Please specify the number of iterations to use for the stratified test split on modeling.
+# OPTIONAL: Please specify the number of iterations to use for the stratified test split on modeling.
 # Final Stratified accuracy of the modeling will derive as the mean accuracy from
 # the number selected. 
-# This number is strongly linked to the time Chronos will need to run.
+# This number is strongly linked to the time Cronos will need to run.
 # Greater numbers lead to more time needed (default is 10)
 # Must be over 1
 splitting_times = 2                           # <---- CHANGE ACCORDINGLY
 
-# Please select the minimum threshold for representation. Families, Orders and Classes
+# OPTIONAL: Please select the minimum threshold for representation. Families, Orders and Classes
 # below that threshold will be plotted as Others
 # Note that this will be translated as percentage
 # Default is 5% denoted as 0.05
 threshold = 0.05                              # <---- CHANGE ACCORDINGLY
 
-# Please select the method that will be used to calculate the optimal number of clusters for each group
+# OPTIONAL: Please select the method that will be used to calculate the optimal number of clusters for each group
 # 1 = The script will choose the number of clusters based on highest difference between the Calinski-Harabasz values (Default)
 # 2 = The optimal number of clusters will be selected based on the highest Calinski-Harabasz value
 clustering_method <- 1
 
-
-# Please select the action Cronos should do if the same parameters are already used for analysis before
-# It can be either 'Continue' or 'Stop'.
-action = 'Continue'                           # <---- CHANGE ACCORDINGLY
 
 
 ########### Now that you selected the parameters you can select everything (Ctrl+A) and press run (Ctrl+Enter)  ##########
@@ -58,14 +121,48 @@ action = 'Continue'                           # <---- CHANGE ACCORDINGLY
 ###################### PLEASE DO NOT CHANGE ANYTHING BEYOND THIS POINT ###################################################
 ##########################################################################################################################
 
-# Here we set the working directory as you selected in order to find your files and R scripts
-# Please do not interfere with the next line
 
-setwd(working_directory)
+
+
+############ Checking for and installing packages ####################################
+
+packages <-c("ade4","dplyr","GUniFrac","devtools","phangorn","cluster","fpc","markovchain", 'spgs','caret','nnet',
+             'gtools', 'mclust','igraph', 'network','ggplot2','reshape2','easyalluvial','ggrepel', 'vegan') 
+# Function to check whether the package is installed
+InsPack <- function(pack)
+{
+  if ((pack %in% installed.packages()) == FALSE) {
+    install.packages(pack,dependencies = T,quiet = T)
+  } 
+}
+
+# Applying the installation on the list of packages
+lapply(packages, InsPack)
+# Make the libraries
+lib <- lapply(packages, require, character.only = TRUE)
+# Check if it was possible to install all required libraries
+flag <- all(as.logical(lib))
+if (("easyalluvial" %in% installed.packages()) == FALSE) {
+  devtools::install_github("erblast/easyalluvial")
+} 
+library("easyalluvial")
+
+# Additional function
+'%!in%' <- function(x,y)!('%in%'(x,y))
 
 ##########################################################################################################################
 #################################### CREATING OUTPUT DIRECTORY ###########################################################
 ##########################################################################################################################
+
+
+# Here we set the working directory as you selected in order to find your files and R scripts
+# Please do not interfere with the next line
+
+# Store the working directory
+working_directory <- getwd()
+
+# Set working directory
+setwd(working_directory)
 
 # Setting the name of the directory where Cronos outputs are stored 
 date_of_run = unlist(strsplit(as.character(date()), split = ' '))
@@ -73,188 +170,214 @@ date_of_run = date_of_run[nchar(date_of_run)>0]
 date_of_run = paste(date_of_run,collapse = '_')
 date_of_run= gsub(pattern = ':', replacement = '_', x = date_of_run)
 output_dir = paste('Cronos',date_of_run,sep ='_')
+
 # Create a log file with all the parameters used
 parameters = matrix('',ncol = 1 ,nrow = 6)
 rownames(parameters) = c('input_meta','input_tree','input_otu','External_Reference_Point','splitting_times','threshold')
-parameters[,1]= c(input_meta,input_tree,input_otu,External_Reference_Point,splitting_times,threshold)
+parameters[,1]= c(input_meta,input_tree,input_otu,paste(External_Reference_Point,collapse=","),splitting_times,threshold)
 
-# Checking whether Cronos was run before with the same parameters
-new_run = T
-for (directory in list.dirs()[2:length(list.dirs())]){
-  
-  previous_runs = list.files(path = directory)
-  existing_runs = read.csv(paste(directory,previous_runs[grepl(pattern = '_log.tab', x = previous_runs , ignore.case = F)], sep = '/'),sep = '\t', header = F)
-  if (all(existing_runs[,2] == parameters[,1])){
-    new_run = F
-  }
+
+# Create the directory where Cronos outputs will be stored
+dir.create(paste(working_directory,output_dir,sep = '/'),showWarnings = F)
+
+# Write file with the parameters on this run
+write.table(x = parameters,file = paste(output_dir,'Cronos_log.tab',sep = '/'), sep = "\t",col.names =F, row.names = TRUE,quote = FALSE)
+
+
+##################################### SECTION ############################################################################
+#################################### CLUSTERING ##########################################################################
+##########################################################################################################################
+
+############################ Reading the files ###########################################
+meta_file <- read.table (file = input_meta, check.names = FALSE, header = TRUE, dec = ".", sep = "\t", row.names = 1, comment.char = "", stringsAsFactors = F)
+# Clean table from empty lines
+meta_file <- data.frame(meta_file[!apply(is.na(meta_file) | meta_file=="",1,all),])
+# Order the mapping file by sample names (ascending)
+meta_file <- data.frame(meta_file[order(row.names(meta_file)),])
+# Selected only the timepoints as they defined by the user
+if (length(Timepoints_order)>1){
+  meta_file <- data.frame(meta_file[which(meta_file[,Timepoints_column] %in% c(Timepoints_order,External_Reference_Point)),])
 }
-if (new_run==T || (new_run == F & action =='Continue')){
+
+# Load the tab-delimited file containing the values to be analyzed (samples names in the first column)
+otu_file <- read.csv(file = input_otu,sep = '\t',row.names = 1,header = T, stringsAsFactors = F, check.names = F)
+# Clean table from empty lines
+otu_file <- otu_file[!apply(is.na(otu_file) | otu_file =="",1,all),]
+
+# Check if a column with taxonomy information exists
+taxonomy_col <- data.frame(otu_file %>% select_if(is.factor), otu_file %>% select_if(is.character))
+
+# Store the taxonomy information
+taxonomy_info <- otu_file[,colnames(taxonomy_col)]
+
+# Reorder the otu_file based on the mapping file
+otu_file <- otu_file[,rownames(meta_file)]
+
+# Check if all the excluded samples exist in the mapping file 
+if (all(Exclude_samples%in%meta_file[,Samples_column])){
+  Exclude_samples <- Exclude_samples
+} else{
+  Exclude_samples <- NULL
+}
+
+# Check if all the timepoints exist in the mapping file
+if (all(Timepoints_order%in%meta_file[,Timepoints_column]) & length(Timepoints_order)>1){
+  Timepoints_order <- Timepoints_order
+} else{
+  Timepoints_order <- NULL
+}
+
+# Keep only the valid external reference points
+External_Reference_Point <- External_Reference_Point[which(External_Reference_Point %in% unique(meta_file[,Timepoints_column]))]
+
+# Remove from the otu_file the excluded samples
+otu_file[,which(meta_file[,Samples_column]%in% Exclude_samples)] <- NULL
+
+# Remove from the mapping the excluded samples 
+if (length(Exclude_samples)>0){
   
-  # Create the directory where Cronos outputs will be stored
-  dir.create(paste(working_directory,output_dir,sep = '/'),showWarnings = F)
-  # Write file with the parameters on this run
+  meta_file <- meta_file[-which(meta_file[,Samples_column]%in% Exclude_samples),]
+}
+
+# Add the taxonomy information
+otu_file <- cbind(otu_file,taxonomy_info)
+
+# Perform all the necessary checks
+{if (all(c(Timepoints_column,Samples_column)%in% colnames(meta_file))== F)
+  stop("Please provide valid names for the Samples column and/or the Timepoints column")
+  if (length(unique(meta_file[,Timepoints_column]))-length(External_Reference_Point)<2)
+    stop("The number of timepoints should be more than 1")
+  if (all(rownames(meta_file)%in%colnames(otu_file))==F)
+    stop ("The mapping mapping file contains samples that do not exist in the otu table!")
   
-  write.table(x = parameters,file = paste(output_dir,'Cronos_log.tab',sep = '/'), sep = "\t",col.names =F, row.names = TRUE,quote = FALSE)
-  
-  
-  ##################################### SECTION ############################################################################
-  #################################### CLUSTERING ##########################################################################
-  ##########################################################################################################################
-  
-  ############################ Reading the files ###########################################
-  meta_file <- read.table (file = input_meta, check.names = FALSE, header = TRUE, dec = ".", sep = "\t", row.names = 1, comment.char = "", stringsAsFactors = F)
-  # Clean table from empty lines
-  meta_file <- data.frame(meta_file[!apply(is.na(meta_file) | meta_file=="",1,all),])
-  # Order the mapping file by sample names (ascending)
-  meta_file <- data.frame(meta_file[order(row.names(meta_file)),])
-  # Load the tab-delimited file containing the values to be analyzed (samples names in the first column)
-  otu_file <- read.csv(file = input_otu,sep = '\t',row.names = 1,header = T, stringsAsFactors = F, check.names = F)
-  # Clean table from empty lines
-  otu_file <- otu_file[!apply(is.na(otu_file) | otu_file =="",1,all),]
+  # Unify the names of the external points
+  if (length(External_Reference_Point)>1 & Unified == "YES"){
+    meta_file[which(meta_file[,Timepoints_column]%in% External_Reference_Point),Timepoints_column] <- paste(External_Reference_Point,collapse="+")
+    External_Reference_Point <- paste(External_Reference_Point,collapse="+")
+  } else if (length(External_Reference_Point)==1 & Unified == "YES"){
+    Unified == "NO"
+  }
   
   
   ############ Express each sample at the selected taxonomy level ##############################
   
-  taxonomic_levels<- c('Phylum','Class','Order','Family')
   Phyla_representation= otu_file
   Class_representation= otu_file
   Order_representation= otu_file
   Family_representation= otu_file
   
+  # Check if a column with taxonomy information exists
+  taxonomy_col <- data.frame(otu_file %>% select_if(is.factor), otu_file %>% select_if(is.character))
   
-  for (i in row.names(otu_file)){
-    for (taxonomy in 1:4){
-      
-      if (taxonomy==1){
-        Phyla_representation[i,'taxonomy']<-unlist(strsplit(otu_file[i,'taxonomy'], split = ';'))[taxonomy+1]
+  tax <- 0
+  if (ncol(taxonomy_col)==1){
+    tax <- 1
+    for (i in row.names(otu_file)){
+      for (taxonomy in 1:4){
         
-        if (Phyla_representation[i,'taxonomy']==""){
+        if (taxonomy==1){
+          Phyla_representation[i,colnames(taxonomy_col)]<-unlist(strsplit(otu_file[i,colnames(taxonomy_col)], split = ';'))[taxonomy+1]
           
-          # Split taxonomic information in its taxonomic classes
-          splitTax <- strsplit(otu_file[i,'taxonomy'], split = ';')
+          if (Phyla_representation[i,colnames(taxonomy_col)]==""){
+            
+            # Split taxonomic information in its taxonomic classes
+            splitTax <- strsplit(otu_file[i,colnames(taxonomy_col)], split = ';')
+            
+            # Save the position where the first empty string (sequence of characters) occurs
+            value <- which(splitTax[[1]] == "")[1]
+            
+            # Save the last known taxa information
+            lastTaxa = splitTax[[1]][value - 1]
+            
+            # Replace all empty values by the last taxa information and the prefix "unknown_"
+            Phyla_representation[i,colnames(taxonomy_col)] <-replace(splitTax[[1]],splitTax[[1]] == "",paste0("unknown_",lastTaxa))[taxonomy+1]
+          }
+        } else if (taxonomy==2){
+          Class_representation[i,colnames(taxonomy_col)]<-unlist(strsplit(otu_file[i,colnames(taxonomy_col)], split = ';'))[taxonomy+1]
           
-          # Save the position where the first empty string (sequence of characters) occurs
-          value <- which(splitTax[[1]] == "")[1]
+          if (Class_representation[i,colnames(taxonomy_col)]==""){
+            
+            # Split taxonomic information in its taxonomic classes
+            splitTax <- strsplit(otu_file[i,colnames(taxonomy_col)], split = ';')
+            
+            # Save the position where the first empty string (sequence of characters) occurs
+            value <- which(splitTax[[1]] == "")[1]
+            
+            # Save the last known taxa information
+            lastTaxa = splitTax[[1]][value - 1]
+            
+            # Replace all empty values by the last taxa information and the prefix "unknown_"
+            Class_representation[i,colnames(taxonomy_col)] <-replace(splitTax[[1]],splitTax[[1]] == "",paste0("unknown_",lastTaxa))[taxonomy+1]
+          }
+        } else if (taxonomy==3){
+          Order_representation[i,colnames(taxonomy_col)]<-unlist(strsplit(otu_file[i,colnames(taxonomy_col)], split = ';'))[taxonomy+1]
           
-          # Save the last known taxa information
-          lastTaxa = splitTax[[1]][value - 1]
+          if (Order_representation[i,colnames(taxonomy_col)]==""){
+            
+            # Split taxonomic information in its taxonomic classes
+            splitTax <- strsplit(otu_file[i,colnames(taxonomy_col)], split = ';')
+            
+            # Save the position where the first empty string (sequence of characters) occurs
+            value <- which(splitTax[[1]] == "")[1]
+            
+            # Save the last known taxa information
+            lastTaxa = splitTax[[1]][value - 1]
+            
+            # Replace all empty values by the last taxa information and the prefix "unknown_"
+            Order_representation[i,colnames(taxonomy_col)] <-replace(splitTax[[1]],splitTax[[1]] == "",paste0("unknown_",lastTaxa))[taxonomy+1]
+          }
+        } else {
+          Family_representation[i,colnames(taxonomy_col)]<-unlist(strsplit(otu_file[i,colnames(taxonomy_col)], split = ';'))[taxonomy+1]
           
-          # Replace all empty values by the last taxa information and the prefix "unknown_"
-          Phyla_representation[i,'taxonomy'] <-replace(splitTax[[1]],splitTax[[1]] == "",paste0("unknown_",lastTaxa))[taxonomy+1]
-        }
-      } else if (taxonomy==2){
-        Class_representation[i,'taxonomy']<-unlist(strsplit(otu_file[i,'taxonomy'], split = ';'))[taxonomy+1]
-        
-        if (Class_representation[i,'taxonomy']==""){
-          
-          # Split taxonomic information in its taxonomic classes
-          splitTax <- strsplit(otu_file[i,'taxonomy'], split = ';')
-          
-          # Save the position where the first empty string (sequence of characters) occurs
-          value <- which(splitTax[[1]] == "")[1]
-          
-          # Save the last known taxa information
-          lastTaxa = splitTax[[1]][value - 1]
-          
-          # Replace all empty values by the last taxa information and the prefix "unknown_"
-          Class_representation[i,'taxonomy'] <-replace(splitTax[[1]],splitTax[[1]] == "",paste0("unknown_",lastTaxa))[taxonomy+1]
-        }
-      } else if (taxonomy==3){
-        Order_representation[i,'taxonomy']<-unlist(strsplit(otu_file[i,'taxonomy'], split = ';'))[taxonomy+1]
-        
-        if (Order_representation[i,'taxonomy']==""){
-          
-          # Split taxonomic information in its taxonomic classes
-          splitTax <- strsplit(otu_file[i,'taxonomy'], split = ';')
-          
-          # Save the position where the first empty string (sequence of characters) occurs
-          value <- which(splitTax[[1]] == "")[1]
-          
-          # Save the last known taxa information
-          lastTaxa = splitTax[[1]][value - 1]
-          
-          # Replace all empty values by the last taxa information and the prefix "unknown_"
-          Order_representation[i,'taxonomy'] <-replace(splitTax[[1]],splitTax[[1]] == "",paste0("unknown_",lastTaxa))[taxonomy+1]
-        }
-      } else {
-        Family_representation[i,'taxonomy']<-unlist(strsplit(otu_file[i,'taxonomy'], split = ';'))[taxonomy+1]
-        
-        if (Family_representation[i,'taxonomy']==""){
-          
-          # Split taxonomic information in its taxonomic classes
-          splitTax <- strsplit(otu_file[i,'taxonomy'], split = ';')
-          
-          # Save the position where the first empty string (sequence of characters) occurs
-          value <- which(splitTax[[1]] == "")[1]
-          
-          # Save the last known taxa information
-          lastTaxa = splitTax[[1]][value - 1]
-          
-          # Replace all empty values by the last taxa information and the prefix "unknown_"
-          Family_representation[i,'taxonomy']<- replace(splitTax[[1]],splitTax[[1]] == "",paste0("unknown_",lastTaxa))[taxonomy+1]
+          if (Family_representation[i,colnames(taxonomy_col)]==""){
+            
+            # Split taxonomic information in its taxonomic classes
+            splitTax <- strsplit(otu_file[i,colnames(taxonomy_col)], split = ';')
+            
+            # Save the position where the first empty string (sequence of characters) occurs
+            value <- which(splitTax[[1]] == "")[1]
+            
+            # Save the last known taxa information
+            lastTaxa = splitTax[[1]][value - 1]
+            
+            # Replace all empty values by the last taxa information and the prefix "unknown_"
+            Family_representation[i,colnames(taxonomy_col)]<- replace(splitTax[[1]],splitTax[[1]] == "",paste0("unknown_",lastTaxa))[taxonomy+1]
+          }
         }
       }
     }
-  }
-  
-  
-  taxa_matrix<-function(otus_taxonomic,otu_file){
-    taxa_selected<- unique(otus_taxonomic[,'taxonomy'])
     
-    taxa<- matrix(0,nrow = length(taxa_selected),ncol = ncol(otus_taxonomic)-1)
-    colnames(taxa)<- head(colnames(otu_file),-1)
-    row.names(taxa)<- taxa_selected
     
-    for (i in 1:length(taxa_selected)){
-      taxa[i,] = colSums(otus_taxonomic[otus_taxonomic['taxonomy']==taxa_selected[i],1:ncol(otus_taxonomic)-1])
+    taxa_matrix<-function(otus_taxonomic,otu_file){
+      taxa_selected<- unique(otus_taxonomic[,colnames(taxonomy_col)])
+      
+      taxa<- matrix(0,nrow = length(taxa_selected),ncol = ncol(otus_taxonomic)-1)
+      colnames(taxa)<- head(colnames(otu_file),-1)
+      row.names(taxa)<- taxa_selected
+      
+      for (i in 1:length(taxa_selected)){
+        taxa[i,] = colSums(otus_taxonomic[otus_taxonomic[colnames(taxonomy_col)]==taxa_selected[i],1:ncol(otus_taxonomic)-1])
+      }
+      return (prop.table(x = taxa,margin = 2))
     }
-    return (prop.table(x = taxa,margin = 2))
-  }
-  
-  Phylum_matrix <- taxa_matrix(Phyla_representation,otu_file)
-  Phylum_matrix <- data.frame(t(Phylum_matrix))
-  Class_matrix <- taxa_matrix(Class_representation, otu_file)
-  Class_matrix <- data.frame(t(Class_matrix))
-  Order_matrix <- taxa_matrix(Order_representation,otu_file)
-  Order_matrix <- data.frame(t(Order_matrix))
-  Family_matrix <- taxa_matrix(Family_representation,otu_file)
-  Family_matrix <- data.frame(t(Family_matrix))
-  
+    
+    Phylum_matrix <- taxa_matrix(Phyla_representation,otu_file)
+    Phylum_matrix <- data.frame(t(Phylum_matrix))
+    Class_matrix <- taxa_matrix(Class_representation, otu_file)
+    Class_matrix <- data.frame(t(Class_matrix))
+    Order_matrix <- taxa_matrix(Order_representation,otu_file)
+    Order_matrix <- data.frame(t(Order_matrix))
+    Family_matrix <- taxa_matrix(Family_representation,otu_file)
+    Family_matrix <- data.frame(t(Family_matrix))
+  } 
   
   ############ Convert files to desirable format ######################################
   
   # keep only those rows that appear in the mapping file
   otu_file <- otu_file[,rownames(meta_file)]
-  # OTU-table and mapping file should have the same order and number of sample names
-  # Order the OTU-table by sample names (ascending)
-  otu_file <- otu_file[,order(names(otu_file))]
-  # Transpose OTU-table and convert format to a data frame
+  
+  # # Transpose OTU-table and convert format to a data frame
   otu_file <- data.frame(t(otu_file))
-  # keep only those that appear in the otu file
-  meta_file <- meta_file[rownames(otu_file),]
-  
-  ############ Checking for and installing packages ####################################
-  
-  packages <-c("ade4","dplyr","GUniFrac","devtools","phangorn","cluster","fpc","markovchain", 'spgs','caret','nnet','gtools', 'mclust','igraph', 'network','ggplot2','reshape2','easyalluvial','ggrepel', 'vegan') 
-  # Function to check whether the package is installed
-  InsPack <- function(pack)
-  {
-    if ((pack %in% installed.packages()) == FALSE) {
-      install.packages(pack,dependencies = T,quiet = T)
-    } 
-  }
-  
-  # Applying the installation on the list of packages
-  lapply(packages, InsPack)
-  # Make the libraries
-  lib <- lapply(packages, require, character.only = TRUE)
-  # Check if it was possible to install all required libraries
-  flag <- all(as.logical(lib))
-  if (("easyalluvial" %in% installed.packages()) == FALSE) {
-    devtools::install_github("erblast/easyalluvial")
-  } 
-  library("easyalluvial")
-  
   
   # Load the phylogenetic tree calculated from the OTU sequences 
   tree_file <- read.tree(input_tree)
@@ -266,10 +389,10 @@ if (new_run==T || (new_run == F & action =='Continue')){
   ############ Divide the dataset into different timepoints ########################
   
   timepoint_collection <- function(otu_file,meta_file){
-    timepoints = unique(meta_file[,'Timepoint'])
+    timepoints = unique(meta_file[,Timepoints_column])
     timepoint_list<- list()
     for (i in timepoints){
-      timepoint_list[[as.character(i)]] <- otu_file[meta_file[,'Timepoint']==i,]
+      timepoint_list[[as.character(i)]] <- otu_file[meta_file[,Timepoints_column]==i,]
     }
     timepoint_list
     return (timepoint_list)
@@ -278,15 +401,12 @@ if (new_run==T || (new_run == F & action =='Continue')){
   
   
   # Create a matrix to save the sample clusters by timepoint
-  samples_on_clusters<-matrix(0, ncol = length(timepoint_list), nrow= nrow(unique(meta_file['Sample'])))
-  row.names(samples_on_clusters)<- unique(meta_file[,'Sample'])
+  samples_on_clusters<-matrix(0, ncol = length(timepoint_list), nrow= nrow(unique(meta_file[Samples_column])))
+  row.names(samples_on_clusters)<- unique(meta_file[,Samples_column])
   colnames(samples_on_clusters)<- names(timepoint_list)
   
   
   ############ Clustering of samples on all timepoints ###############################
-  
-  # Initialize a list to save Bayesian Information Criterion for all the timepoints 
-  BIC_list = list()
   
   # Setting the colour code for the exported plots
   colours_ploting = c('saddlebrown','cyan3','olivedrab4','sienna1','orange2','yellowgreen','violetred2','rosybrown','orchid4','salmon3', colors())
@@ -311,6 +431,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
     temp_number_samples <- c()
     temp_time <- c()
     
+    # Calculate the inifrac distance
     unifracs <- GUniFrac(otu.tab = timepoint_list[[name]] ,tree = rooted_tree, alpha = c(0.0,0.5,1.0))$unifracs
     
     # Weight on abundant lineages so  the distance is not dominated by highly abundant lineages with 0.5 having the best power
@@ -357,6 +478,13 @@ if (new_run==T || (new_run == F & action =='Continue')){
       } else if (clustering_method==2){
         best_final_score <-which.max(calinski_harabasz_values) +1
       }
+      
+      # Check the optimal number of clusters is 1
+      gmm_testing = Mclust(data = as.dist(unifract_dist),G = c(1,best_final_score),  modelNames = c("EII","VII","EEI","EVI","VEI","VVI") , verbose = F)
+      
+      if (gmm_testing$G == 1){
+        best_final_score <- 1
+      }
       return (list(best_final_score, calinski_harabasz_values))
     }
     
@@ -385,31 +513,31 @@ if (new_run==T || (new_run == F & action =='Continue')){
     medoids[,name] = c(clustering_results[[2]], medoids_temp)
     
     # Store the information about the medoids, the timepoints and the clusters
-    if (name!="ot"){
-      if (name!=External_Reference_Point){
-        temp_medoids_plot = c(clustering_results[[2]])
-        for (i in 1:best_k){
-          temp_medoid_names <- c(temp_medoid_names, paste0("TP:",name," Cl:",i))
-          temp_number_samples <- c(temp_number_samples,length(which(clusters==i))/length(clusters))
-          temp_time <- c(temp_time,name)
-          temp_clusters_medoids <- c(temp_clusters_medoids,paste("Cluster",i))
-        }
-      } else {
-        temp_medoids_plot = c( clustering_results[[2]])
-        for (i in 1:best_k){
-          temp_medoid_names <- c( temp_medoid_names,paste0(External_Reference_Point," Cl:",i))
-          temp_number_samples <- c(temp_number_samples,length(which(clusters==i))/length(clusters))
-          temp_time <- c(temp_time,name)
-          temp_clusters_medoids <- c(temp_clusters_medoids,paste("Cluster",i))
-          
-        }
+    
+    if (name %!in% External_Reference_Point){
+      temp_medoids_plot = c(clustering_results[[2]])
+      for (i in 1:best_k){
+        temp_medoid_names <- c(temp_medoid_names, paste0("TP:",name," Cl:",i))
+        temp_number_samples <- c(temp_number_samples,length(which(clusters==i))/length(clusters))
+        temp_time <- c(temp_time,name)
+        temp_clusters_medoids <- c(temp_clusters_medoids,paste("Cluster",i))
+      }
+    } else {
+      temp_medoids_plot = c( clustering_results[[2]])
+      for (i in 1:best_k){
+        temp_medoid_names <- c( temp_medoid_names,paste0(name," Cl:",i))
+        temp_number_samples <- c(temp_number_samples,length(which(clusters==i))/length(clusters))
+        temp_time <- c(temp_time,name)
+        temp_clusters_medoids <- c(temp_clusters_medoids,paste("Cluster",i))
+        
       }
     }
+    
     
     #  medoids = c(medoids, clustering_results[[2]])
     avg_width = clustering_results[[3]]
     # Assing the samples to the estimated clusters
-    samples_on_clusters[meta_file[row.names(unifract_dist),'Sample'],name]<- clusters
+    samples_on_clusters[meta_file[row.names(unifract_dist),Samples_column],name]<- clusters
     samples_on_clusters[samples_on_clusters==0] <- NA
     
     
@@ -456,48 +584,15 @@ if (new_run==T || (new_run == F & action =='Continue')){
     sclass(unifract_dist,as.factor(clusters), colours_ploting[1:nlevels(as.factor(clusters))])
     dev.off()
     
-    #############Gaussian Mixture Model Based Test to evaluate whether the dataset forms groups ###############################################
-    
-    gmm_testing = Mclust(data = as.dist(unifract_dist),G = c(1,max(samples_on_clusters[,name], na.rm = T)),  modelNames = c("EII","VII","EEI","EVI","VEI","VVI") , verbose = F)
-    
-    BIC_list[[name]] = gmm_testing$BIC
-    if (gmm_testing$G == 1){
-      samples_on_clusters[,name] = rep(1,nrow(samples_on_clusters))
-      
-      # Store the information about the medoids, the timepoints and the clusters
-      if (name!="ot"){
-        if (name!=External_Reference_Point){
-          clustering_results = PAM_clustering(unifract_dist = unifract_dist, k = 1)
-          temp_medoids_plot = c( clustering_results[[2]])
-          
-          temp_medoid_names <- c( paste0("TP:",name," Cl:",1))
-          temp_number_samples <- c(length(which(clusters==1))/length(clusters))
-          temp_time <- name
-          temp_clusters_medoids <- c(paste("Cluster",1))
-          
-        } else {
-          clustering_results = PAM_clustering(unifract_dist = unifract_dist, k = 1)
-          temp_medoids_plot = c(clustering_results[[2]])
-          
-          medoid_names <- c(medoid_names, paste0(External_Reference_Point," Cl:",1))
-          temp_number_samples <- c(length(which(clusters==1))/length(clusters))
-          temp_time <- name
-          temp_clusters_medoids <- c(paste("Cluster",1))
-          
-          
-        }
-        
-      }
-    }
     
     # Store the information about the medoids, the timepoints and the clusters
-    if (name!="ot"){
-      medoids_plot = c(medoids_plot, temp_medoids_plot)
-      medoid_names <- c(medoid_names, temp_medoid_names)
-      number_samples <- c(number_samples,temp_number_samples)
-      time <- c(time,temp_time)
-      clusters_medoids <- c(clusters_medoids,temp_clusters_medoids)
-    }
+    
+    medoids_plot = c(medoids_plot, temp_medoids_plot)
+    medoid_names <- c(medoid_names, temp_medoid_names)
+    number_samples <- c(number_samples,temp_number_samples)
+    time <- c(time,temp_time)
+    clusters_medoids <- c(clusters_medoids,temp_clusters_medoids)
+    
     
   }
   
@@ -531,11 +626,14 @@ if (new_run==T || (new_run == F & action =='Continue')){
     }
     return (counter)
   }
-  
-  if (nchar(External_Reference_Point)>0){
-    tps = as.character(sort(as.numeric(colnames(samples_on_clusters)[colnames(samples_on_clusters)!='ot' & colnames(samples_on_clusters)!=External_Reference_Point]),decreasing = F))
+  if (length(Timepoints_order)>0){
+    tps = Timepoints_order
   } else {
-    tps = as.character(sort(as.numeric(colnames(samples_on_clusters[colnames(samples_on_clusters)!='ot'])),decreasing = F))
+    if (length(External_Reference_Point)>0) {
+      tps = as.character(mixedsort(colnames(samples_on_clusters)[colnames(samples_on_clusters) %!in% External_Reference_Point],decreasing = F))
+    } else {
+      tps = as.character(mixedsort(colnames(samples_on_clusters),decreasing = F))
+    }
   }
   
   
@@ -630,6 +728,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
     dataset_full_on_clusters[,i] <- dataset_full_on_clusters[,i]+independed_clusters[i-1]
   }
   
+  
   Markov_Test_X2 <- function(dataset_full){
     Ss <- c()
     dof <- c()
@@ -665,8 +764,11 @@ if (new_run==T || (new_run == F & action =='Continue')){
     return (Markovian_Property_of_transitions)
   }
   
-  Markovian_Check <- Markov_Test_X2(dataset_full = dataset_full)
-  Markovian_property= all(Markovian_Check[1,]==1)
+  if (length(tps)>2){
+    
+    Markovian_Check <- Markov_Test_X2(dataset_full = dataset_full)
+    Markovian_property= all(Markovian_Check[1,]==1)
+  }
   
   ############ Claim transition matrix ################################################
   
@@ -718,7 +820,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
   bubble_transition_matrix <- data.frame(x1 = x_initial, x2=x_final, y1 = y_initial , y2 = y_final)
   
   # Convert Timepoints into factors
-  if (nchar(External_Reference_Point)>0) {  
+  if (length(External_Reference_Point)>0) {  
     mdsdata$Time <- factor(mdsdata$Time,levels=c(colnames(dataset_full_on_clusters),External_Reference_Point))
   } else {
     mdsdata$Time <- factor(mdsdata$Time,levels=colnames(dataset_full_on_clusters))
@@ -734,7 +836,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
     for (i in c(tps, External_Reference_Point)){
       for (j in min(samples_on_clusters[,i], na.rm = T):max(samples_on_clusters[,i],na.rm = T)){
         timiclj = samples_on_clusters[!is.na(samples_on_clusters[,i]),i]
-        metatimepoint= meta_file[meta_file[,"Timepoint"]==i,]
+        metatimepoint= meta_file[meta_file[,Timepoints_column]==i,]
         taxa_clusters[[paste(as.character(i),as.character(j),sep = ' cluster ')]]= taxa_repr_matrix[medoids[j,i],]
       }
     }
@@ -751,37 +853,46 @@ if (new_run==T || (new_run == F & action =='Continue')){
     return (clustering_taxa)
   }
   
-  Phyla_clusters <- taxa_per_cluster(Phylum_matrix,samples_on_clusters = samples_on_clusters,timepoint_list = timepoint_list)
-  Class_clusters <- taxa_per_cluster(Class_matrix,samples_on_clusters = samples_on_clusters, timepoint_list = timepoint_list)
-  Order_clusters <- taxa_per_cluster(Order_matrix,samples_on_clusters = samples_on_clusters, timepoint_list = timepoint_list)
-  Family_clusters <-taxa_per_cluster(Family_matrix,samples_on_clusters = samples_on_clusters, timepoint_list = timepoint_list)
+  if(tax==1){
+    
+    Phyla_clusters <- taxa_per_cluster(Phylum_matrix,samples_on_clusters = samples_on_clusters,timepoint_list = timepoint_list)
+    Class_clusters <- taxa_per_cluster(Class_matrix,samples_on_clusters = samples_on_clusters, timepoint_list = timepoint_list)
+    Order_clusters <- taxa_per_cluster(Order_matrix,samples_on_clusters = samples_on_clusters, timepoint_list = timepoint_list)
+    Family_clusters <-taxa_per_cluster(Family_matrix,samples_on_clusters = samples_on_clusters, timepoint_list = timepoint_list)
+    
+  }
   
-  samples_on_clusters = samples_on_clusters[,names(timepoint_list)[names(timepoint_list)!='ot']]
-  samples_on_clusters = samples_on_clusters[,c(as.character(sort(as.numeric(colnames(samples_on_clusters)[colnames(samples_on_clusters)!=External_Reference_Point]),decreasing = F,na.last = T)),External_Reference_Point)]
+  samples_on_clusters = samples_on_clusters[,c(as.character(mixedsort(colnames(samples_on_clusters)[colnames(samples_on_clusters) %!in% External_Reference_Point],decreasing = F,na.last = T)),External_Reference_Point)]
   
+  dataset_full <- samples_on_clusters[,colnames(samples_on_clusters) %!in% External_Reference_Point]
   
-  dataset_full<- samples_on_clusters[is.na(samples_on_clusters[,External_Reference_Point]),1:ncol(samples_on_clusters)-1]
+  dataset_full <- dataset_full[!apply(is.na(dataset_full) | dataset_full=="",1,all),,drop=FALSE]
   
   ############ Write comma delimited files with outputs   ####################################
   
-  colnames(Phyla_clusters)<-lapply(X = colnames(Phyla_clusters), FUN = function(x){paste('Timepoint',x,sep = ' ')})
-  colnames(Class_clusters)<-colnames(Phyla_clusters)
-  colnames(Order_clusters)<-colnames(Phyla_clusters)
-  colnames(Family_clusters)<-colnames(Phyla_clusters)
-  
   write.table(x = samples_on_clusters, file = paste(output_dir, "Samples_in_Timepoint-specific_Clusters.tab",sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
   
-  dir.create(paste(output_dir,'Taxonomic Representation of Clusters',sep='/'))
-  write.table(x = Phyla_clusters,file = paste(paste(output_dir,'Taxonomic Representation of Clusters',sep='/'), "Clusters_at_Phylum_level.tab", sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
-  write.table(x = Class_clusters,file = paste(paste(output_dir,'Taxonomic Representation of Clusters',sep='/'), "Clusters_at_Class_level.tab", sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
-  write.table(x = Order_clusters,file = paste(paste(output_dir,'Taxonomic Representation of Clusters',sep='/'), "Clusters_at_Order_level.tab", sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
-  write.table(x = Family_clusters,file = paste(paste(output_dir,'Taxonomic Representation of Clusters',sep='/'), "Clusters_at_Family_level.tab", sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
+  if (tax==1){
+    
+    colnames(Phyla_clusters)<-lapply(X = colnames(Phyla_clusters), FUN = function(x){paste("Timepoint",x,sep = ' ')})
+    colnames(Class_clusters)<-colnames(Phyla_clusters)
+    colnames(Order_clusters)<-colnames(Phyla_clusters)
+    colnames(Family_clusters)<-colnames(Phyla_clusters)
+    
+    
+    dir.create(paste(output_dir,'Taxonomic Representation of Clusters',sep='/'))
+    write.table(x = Phyla_clusters,file = paste(paste(output_dir,'Taxonomic Representation of Clusters',sep='/'), "Clusters_at_Phylum_level.tab", sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
+    write.table(x = Class_clusters,file = paste(paste(output_dir,'Taxonomic Representation of Clusters',sep='/'), "Clusters_at_Class_level.tab", sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
+    write.table(x = Order_clusters,file = paste(paste(output_dir,'Taxonomic Representation of Clusters',sep='/'), "Clusters_at_Order_level.tab", sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
+    write.table(x = Family_clusters,file = paste(paste(output_dir,'Taxonomic Representation of Clusters',sep='/'), "Clusters_at_Family_level.tab", sep = '/'), sep = "\t",col.names =NA, row.names = TRUE,quote = FALSE)
+    
+  }
   
   No_clusters_per_timepoint = apply(dataset_full, 2,function(x){max(x,na.rm = T)})
   transition_names = c()
   for (j in 1:length(No_clusters_per_timepoint)){
     for (i in 1:(No_clusters_per_timepoint[j])){
-      transition_names= c(transition_names,paste( paste('Timepoint',colnames(dataset_full)[j],sep = ' '), paste( 'Cluster',i,sep = ' '),sep = ' '))
+      transition_names= c(transition_names,paste( paste("Timepoint",colnames(dataset_full)[j],sep = ' '), paste( 'Cluster',i,sep = ' '),sep = ' '))
     }
   }
   rownames(matrix_of_transitions)= paste('From ', transition_names,sep = '')
@@ -885,16 +996,16 @@ if (new_run==T || (new_run == F & action =='Continue')){
   Train_stratified_overtime_accuracy <- c()
   Test_stratified_overtime_accuracy <- c()
   # Naming the effectors to be imputed on the model
-  effectors = colnames(meta_file)[3:ncol(meta_file)]
+  effectors = colnames(meta_file)[which(colnames(meta_file)%!in%c(Timepoints_column,Samples_column))]
   
   ###################### Perform Tasks on all Timepoints ###############################
   
   # Loop to create a model for each timepoint on the dataset
-  for (end_timepoint in head(as.numeric(rev(colnames(dataset_full))),n = (ncol(dataset_full))-1)){
+  for (end_timepoint in head(rev(tps),n=(length(tps)-1))){
     
     
     # Setting the timepoints from which the different models derive  
-    timepoints_to_perform = rev(colnames(dataset_full)[as.numeric(colnames(dataset_full)) < end_timepoint])
+    timepoints_to_perform = rev(tps[1:(which(tps==end_timepoint)-1)])
     
     ###################### Leave one out Null #######################################################
     
@@ -1046,190 +1157,223 @@ if (new_run==T || (new_run == F & action =='Continue')){
     
     ###################### Perform all Tasks with different combinations of metadata ############
     
-    for (Ncomb in 1: (ncol(meta_file)-3)){
-      # Create a vector of all possible feature combinations
-      effector_combinations = combinations(v = effectors,r = Ncomb, repeats.allowed = F, n = length(effectors))
-      # Loop to select all possible combinations of features from the dataset  
-      for (combination in 1:nrow(effector_combinations)){
-        # Select the table with the corresponding features on the corresponding timepoint
-        files = meta_file[,c('Sample','Timepoint',effector_combinations[combination,])]
-        
-        ###################### Leave one out Combinations #######################################################
-        
-        # Calculate mean accuracy of prediction on final timepoint, via Leave One Out method of splitting Train-Test sets
-        LOO_multilogreg_One <- function (dataset_full,timepoint,end_timepoint,meta_file,Ncomb, splitting_times){
+    for (Ncomb in 1: (ncol(meta_file)-2)){
+      if ((ncol(meta_file)-2)>0){
+        analysis <- 1
+        # Create a vector of all possible feature combinations
+        if (Ncomb==1){
+          effector_combinations = data.frame(combinations(v = effectors,r = Ncomb, repeats.allowed = F, n = length(effectors)))
           
-          logreg <- as.data.frame(matrix(NA,nrow = nrow(dataset_full),ncol = ncol(meta_file)))
-          colnames(logreg)= c(paste('Cluster_at',end_timepoint,sep = '_'), timepoint , colnames(meta_file)[3:ncol(meta_file)])
-          rownames(logreg)= rownames(dataset_full)
-          
-          for (modeling_sample in (rownames(dataset_full))){
-            subTab = meta_file[meta_file[,1] %in% modeling_sample & meta_file[,2] == as.numeric(end_timepoint), 3:ncol(meta_file)]
-            if (Ncomb > 1 ){
-              if(nrow(subTab) == 1){
-                logreg[modeling_sample, colnames(meta_file)[3:ncol(meta_file)]] = subTab
-              }
-            }
-            else if (Ncomb == 1){
-              if (length(subTab) == 1){
-                logreg[modeling_sample, colnames(meta_file)[3:ncol(meta_file)]] = subTab
-              }
-            }
-            logreg[modeling_sample, 2] = ifelse(test = length(dataset_full[modeling_sample,timepoint]), yes = dataset_full[modeling_sample,timepoint], no = NA)
-            logreg[modeling_sample, 1] = ifelse(test = length(dataset_full[modeling_sample,as.character(end_timepoint)]), yes = dataset_full[modeling_sample,as.character(end_timepoint)], no = NA)
-          }
-          
-          logreg = logreg[complete.cases(logreg),]
-          
-          acc <- c()
-          tra <- c()
-          form = as.formula(paste(paste('Cluster_at',end_timepoint,sep = '_'),'~.',sep = ''))
-          for (repeat_time in 1:splitting_times){
-            for (j in 1:nrow(logreg)){
-              trainset = logreg[1:nrow(logreg)!=j,]
-              testset = logreg[j,]
-              
-              prediction_model <- multinom(formula = form , data = trainset ,censored = T, model = T)
-              
-              training_set_accuracies <- prediction_model %>% predict(trainset[,2:ncol(trainset)])
-              test_set_predictions <- prediction_model %>% predict(testset[,2:ncol(testset)])
-              acc[j] = (sum(test_set_predictions == testset[,1])/ nrow(testset)) *100
-              tra[j] = (sum(training_set_accuracies == trainset[,1])/nrow(trainset))*100
-              
-            }
-          }        
-          return (c(mean(tra),mean(acc)))
+        } else {
+          effector_combinations = combinations(v = effectors,r = Ncomb, repeats.allowed = F, n = length(effectors))
         }
-        
-        ###################### Stratified Train/Test splits Combinations ########################################
-        
-        # Calculate accuracy of prediction on final timepoint, as a mean of 100 accuracies with different
-        # Train-Test stratified splits. Stratfication is performed on all metadata categories 
-        multilogreg_stratified_One <- function(dataset_full,optimal_splitting_percentage,timepoint,end_timepoint,meta_file,Ncomb,splitting_times){
-          
-          logreg <- as.data.frame(matrix(NA,nrow = nrow(dataset_full),ncol = ncol(meta_file)))
-          colnames(logreg)= c(paste('Cluster_at',end_timepoint,sep = '_'),timepoint,colnames(meta_file)[3:ncol(meta_file)])
-          rownames(logreg)= rownames(dataset_full)
-          
-          for (modeling_sample in (rownames(dataset_full))){
-            
-            subTab = meta_file[meta_file[,1] %in% modeling_sample & meta_file[,2] == as.numeric(end_timepoint), 3:ncol(meta_file)]
-            
-            if (Ncomb > 1){
-              if (nrow(subTab) == 1){  
-                logreg[modeling_sample, colnames(meta_file)[3:ncol(meta_file)]] = subTab
+        # Loop to select all possible combinations of features from the dataset  
+        for (combination in 1:nrow(effector_combinations)){
+          # Select the table with the corresponding features on the corresponding timepoint
+          files = meta_file[,c(Samples_column,Timepoints_column,effector_combinations[combination,])]
+          if (Ncomb==1){
+            for (number in 1:Ncomb){
+              if (length(unique(files[-which(meta_file[,Timepoints_column]%in%External_Reference_Point),effector_combinations[combination,]]))==1){
+                analysis <- 0
               }
             }
-            else if (Ncomb == 1){
-              if (length(subTab) == 1){
-                logreg[modeling_sample, colnames(meta_file)[3:ncol(meta_file)]] = subTab
+          }
+          ###################### Leave one out Combinations #######################################################
+          if (analysis==1) {
+            # Calculate mean accuracy of prediction on final timepoint, via Leave One Out method of splitting Train-Test sets
+            LOO_multilogreg_One <- function (dataset_full,timepoint,end_timepoint,meta_file,Ncomb, splitting_times){
+              
+              logreg <- as.data.frame(matrix(NA,nrow = nrow(dataset_full),ncol = ncol(meta_file)))
+              colnames(logreg)= c(paste('Cluster_at',end_timepoint,sep = '_'), timepoint , colnames(meta_file)[which(colnames(meta_file)%!in%c(Timepoints_column,Samples_column))])
+              rownames(logreg)= rownames(dataset_full)
+              
+              for (modeling_sample in (rownames(dataset_full))){
+                subTab = meta_file[meta_file[,Samples_column] %in% modeling_sample & meta_file[,Timepoints_column] == end_timepoint, which(colnames(meta_file)%!in%c(Timepoints_column,Samples_column)),drop=F] ############!!!!
+                if (Ncomb > 1 ){
+                  if(nrow(subTab) == 1){
+                    logreg[modeling_sample, colnames(meta_file)[which(colnames(meta_file)%!in%c(Timepoints_column,Samples_column))]] = subTab
+                  }
+                }
+                else if (Ncomb == 1){
+                  if (length(subTab) == 1 & nrow(subTab) == 1){
+                    logreg[modeling_sample, colnames(meta_file)[which(colnames(meta_file)%!in%c(Timepoints_column,Samples_column))]] = subTab
+                  }
+                }
+                logreg[modeling_sample, 2] = ifelse(test = length(dataset_full[modeling_sample,timepoint]), yes = dataset_full[modeling_sample,timepoint], no = NA)
+                logreg[modeling_sample, 1] = ifelse(test = length(dataset_full[modeling_sample,as.character(end_timepoint)]), yes = dataset_full[modeling_sample,as.character(end_timepoint)], no = NA)
               }
+              
+              logreg = logreg[complete.cases(logreg),]
+              
+              right_columns <- c(1,2)
+              if (ncol(logreg)>2){
+                for (logreg_check in 3:ncol(logreg)){
+                  if (length(unique(logreg[,(logreg_check)]))>1){
+                    right_columns <- c(right_columns,logreg_check)
+                  }
+                }
+              }
+              
+              logreg <- logreg[,right_columns]
+              
+              acc <- c()
+              tra <- c()
+              form = as.formula(paste(paste('Cluster_at',end_timepoint,sep = '_'),'~.',sep = ''))
+              for (repeat_time in 1:splitting_times){
+                for (j in 1:nrow(logreg)){
+                  trainset = logreg[1:nrow(logreg)!=j,]
+                  testset = logreg[j,]
+                  
+                  prediction_model <- multinom(formula = form , data = trainset ,censored = T, model = T)
+                  
+                  training_set_accuracies <- prediction_model %>% predict(trainset[,2:ncol(trainset)])
+                  test_set_predictions <- prediction_model %>% predict(testset[,2:ncol(testset)])
+                  acc[j] = (sum(test_set_predictions == testset[,1])/ nrow(testset)) *100
+                  tra[j] = (sum(training_set_accuracies == trainset[,1])/nrow(trainset))*100
+                  
+                }
+              }        
+              return (c(mean(tra),mean(acc)))
             }
-            logreg[modeling_sample, 2] = ifelse(test = length(dataset_full[modeling_sample,timepoint]), yes = dataset_full[modeling_sample,timepoint], no = NA)
-            logreg[modeling_sample, 1] = ifelse(test = length(dataset_full[modeling_sample,as.character(end_timepoint)]), yes = dataset_full[modeling_sample,as.character(end_timepoint)], no = NA)
+            
+            ###################### Stratified Train/Test splits Combinations ########################################
+            
+            # Calculate accuracy of prediction on final timepoint, as a mean of 100 accuracies with different
+            # Train-Test stratified splits. Stratfication is performed on all metadata categories 
+            multilogreg_stratified_One <- function(dataset_full,optimal_splitting_percentage,timepoint,end_timepoint,meta_file,Ncomb,splitting_times){
+              
+              logreg <- as.data.frame(matrix(NA,nrow = nrow(dataset_full),ncol = ncol(meta_file)))
+              colnames(logreg)= c(paste('Cluster_at',end_timepoint,sep = '_'),timepoint,colnames(meta_file)[which(colnames(meta_file)%!in%c(Timepoints_column,Samples_column))])
+              rownames(logreg)= rownames(dataset_full)
+              
+              for (modeling_sample in (rownames(dataset_full))){
+                
+                subTab = meta_file[meta_file[,Samples_column] %in% modeling_sample & meta_file[,Timepoints_column] == end_timepoint, which(colnames(meta_file)%!in%c(Timepoints_column,Samples_column))]#######################!!!!!!
+                
+                if (Ncomb > 1){
+                  if (nrow(subTab) == 1){  
+                    logreg[modeling_sample, colnames(meta_file)[which(colnames(meta_file)%!in%c(Timepoints_column,Samples_column))]] = subTab
+                  }
+                }
+                else if (Ncomb == 1){
+                  if (length(subTab) == 1){
+                    logreg[modeling_sample, colnames(meta_file)[which(colnames(meta_file)%!in%c(Timepoints_column,Samples_column))]] = subTab
+                  }
+                }
+                logreg[modeling_sample, 2] = ifelse(test = length(dataset_full[modeling_sample,timepoint]), yes = dataset_full[modeling_sample,timepoint], no = NA)
+                logreg[modeling_sample, 1] = ifelse(test = length(dataset_full[modeling_sample,as.character(end_timepoint)]), yes = dataset_full[modeling_sample,as.character(end_timepoint)], no = NA)
+                
+                
+              }
+              logreg = logreg[complete.cases(logreg),]
+              
+              right_columns <- c(1,2)
+              if (ncol(logreg)>2){
+                for (logreg_check in 3:ncol(logreg)){
+                  if (length(unique(logreg[,(logreg_check)]))>1){
+                    right_columns <- c(right_columns,logreg_check)
+                  }
+                }
+              }
+              logreg <- logreg[,right_columns]
+              
+              
+              train_index <- createDataPartition(y = logreg[,paste('Cluster_at',end_timepoint,sep = '_')], p = optimal_splitting_percentage, list = F, times = splitting_times, groups = max(apply(X = logreg, MARGIN = 2, FUN = function(x){length(unique(x))})) )
+              
+              acc <- c()
+              tra <- c()
+              fo = as.formula(paste(paste('Cluster_at',end_timepoint,sep = '_'),'~.',sep = ''))
+              for (j in 1:ncol(train_index)){
+                trainset = logreg[train_index[,j],]
+                testset = logreg[-train_index[,j],]
+                if (all(apply(X = logreg, MARGIN = 2, FUN = function(x){length(unique(x))})== apply(X = trainset, MARGIN = 2, FUN = function(x){length(unique(x))}))){
+                  
+                  prediction_model <- multinom(formula = fo, data = trainset ,censored = T, model = T)
+                  
+                  training_set_accuracies <- prediction_model %>% predict(trainset[,2:ncol(trainset)])
+                  test_set_predictions <- prediction_model %>% predict(testset[,2:ncol(testset)])
+                  acc[j] = (sum(test_set_predictions == testset[,1])/ nrow(testset)) *100
+                  tra[j] = (sum(training_set_accuracies == trainset[,1])/nrow(trainset))*100
+                }
+              }
+              
+              acc = na.omit(acc)
+              tra = na.omit(tra)
+              
+              Test_set_stratified_accuracy <- mean(acc)
+              Train_set_stratified_accuracy = mean(tra)
+              trainsd <- sd(tra)
+              testsd <- sd(acc)
+              
+              return (c(Test_set_stratified_accuracy,Train_set_stratified_accuracy, trainsd,testsd))
+            }
+            
+            ###################### Calculate optimal split percentage ############################################
+            # Calculate the optimal split percentage between .65 and .90 for predicting the final timepoint on the
+            # exact previous one to be used in all splits for all timepoints. The criterion is the best accuracy  
+            # as derived by the previous function with argument the different percentages.
+            optimal_splitting_percentage <- function (dataset_full){
+              all_calculated_accuracies <- c()
+              best_splitting_percentage <- c()
+              for (percentage_to_calculate in 65:90){
+                percentage_to_calculate = percentage_to_calculate/100
+                telika <- multilogreg_stratified_One(dataset_full = dataset_full, optimal_splitting_percentage = percentage_to_calculate, timepoint = tail(timepoints_to_perform,1), end_timepoint = end_timepoint,meta_file = files,Ncomb = Ncomb,splitting_times = splitting_times)
+                Test_set_stratified_accuracy = telika[1]
+                Train_set_stratified_accuracy = telika[2]
+                trainsd = telika[3]
+                testsd = telika[4]
+                all_calculated_accuracies= c(all_calculated_accuracies,Test_set_stratified_accuracy)
+                best_splitting_percentage = c(best_splitting_percentage,percentage_to_calculate)
+              }
+              
+              return (best_splitting_percentage[which.max(all_calculated_accuracies)])
+            }
+            
+            # Assign the best percentage on a variable to use on the final calculations
+            optimal_splitting_percentage <- optimal_splitting_percentage(dataset_full = dataset_full)
+            
+            ###################### Initializing variables Combinations ########################################
+            Test_set_LOO_accuracy <- c()
+            Train_set_LOO_accuracy <-c()
+            Test_set_stratified_accuracy <- c()
+            Train_set_stratified_accuracy <- c()
+            trainsd <- c()
+            testsd <- c()
+            
+            ###################### Calculate Accuracies on timepoints Combinations ############################
+            
+            # Loop to create a model from every timepoint to the final timepoint as selected from the first loop
+            for (timepoint in timepoints_to_perform){
+              
+              LOOTeliko <- LOO_multilogreg_One(dataset_full = dataset_full, timepoint = timepoint,end_timepoint = end_timepoint,meta_file = files,Ncomb = Ncomb, splitting_times = splitting_times)
+              
+              Train_set_LOO_accuracy = c(Train_set_LOO_accuracy,LOOTeliko[1])
+              Test_set_LOO_accuracy = c(Test_set_LOO_accuracy,LOOTeliko[2])
+              
+              MultiLogReg_results <- multilogreg_stratified_One(dataset_full = dataset_full, optimal_splitting_percentage = optimal_splitting_percentage,timepoint =  timepoint,meta_file =  files, end_timepoint = end_timepoint, Ncomb = Ncomb,splitting_times = splitting_times)
+              
+              
+              Test_set_stratified_accuracy <- c(Test_set_stratified_accuracy,MultiLogReg_results[1])
+              Train_set_stratified_accuracy <- c(Train_set_stratified_accuracy, MultiLogReg_results[2])
+              trainsd <- c(trainsd, MultiLogReg_results[3])
+              testsd <- c(testsd, MultiLogReg_results[4])
+            }  
             
             
+            ###################### Save accuracies on the lists ######################################
+            
+            # Select the effects that created the model
+            effect = paste(effector_combinations[combination,],collapse = ' & ')
+            
+            # Adding to the lists in order to export the correct matrix
+            Train_sets_LOO = rbind (Train_sets_LOO, c(effect,rep(0,(ncol(dataset_full)-length(Train_set_LOO_accuracy)-1)),   Train_set_LOO_accuracy))
+            Test_sets_LOO  = rbind (Test_sets_LOO,  c(effect,rep(0,(ncol(dataset_full)-length(Test_set_LOO_accuracy)-1)),    Test_set_LOO_accuracy))
+            Test_sets_stratified_split  = rbind (Test_sets_stratified_split,  c(effect,rep(0,(ncol(dataset_full)-length(Test_set_stratified_accuracy)-1)), Test_set_stratified_accuracy))
+            Train_sets_stratified_split = rbind (Train_sets_stratified_split, c(effect,rep(0,(ncol(dataset_full)-length(Train_set_stratified_accuracy)-1)),Train_set_stratified_accuracy))
           }
-          logreg = logreg[complete.cases(logreg),]
-          
-          train_index <- createDataPartition(y = logreg[,paste('Cluster_at',end_timepoint,sep = '_')], p = optimal_splitting_percentage, list = F, times = splitting_times, groups = max(apply(X = logreg, MARGIN = 2, FUN = function(x){length(unique(x))})) )
-          
-          acc <- c()
-          tra <- c()
-          fo = as.formula(paste(paste('Cluster_at',end_timepoint,sep = '_'),'~.',sep = ''))
-          for (j in 1:ncol(train_index)){
-            trainset = logreg[train_index[,j],]
-            testset = logreg[-train_index[,j],]
-            if (all(apply(X = logreg, MARGIN = 2, FUN = function(x){length(unique(x))})== apply(X = trainset, MARGIN = 2, FUN = function(x){length(unique(x))}))){
-              
-              prediction_model <- multinom(formula = fo, data = trainset ,censored = T, model = T)
-              
-              training_set_accuracies <- prediction_model %>% predict(trainset[,2:ncol(trainset)])
-              test_set_predictions <- prediction_model %>% predict(testset[,2:ncol(testset)])
-              acc[j] = (sum(test_set_predictions == testset[,1])/ nrow(testset)) *100
-              tra[j] = (sum(training_set_accuracies == trainset[,1])/nrow(trainset))*100
-            }
-          }
-          
-          acc = na.omit(acc)
-          tra = na.omit(tra)
-          
-          Test_set_stratified_accuracy <- mean(acc)
-          Train_set_stratified_accuracy = mean(tra)
-          trainsd <- sd(tra)
-          testsd <- sd(acc)
-          
-          return (c(Test_set_stratified_accuracy,Train_set_stratified_accuracy, trainsd,testsd))
         }
-        
-        ###################### Calculate optimal split percentage ############################################
-        # Calculate the optimal split percentage between .65 and .90 for predicting the final timepoint on the
-        # exact previous one to be used in all splits for all timepoints. The criterion is the best accuracy  
-        # as derived by the previous function with argument the different percentages.
-        optimal_splitting_percentage <- function (dataset_full){
-          all_calculated_accuracies <- c()
-          best_splitting_percentage <- c()
-          for (percentage_to_calculate in 65:90){
-            percentage_to_calculate = percentage_to_calculate/100
-            telika <- multilogreg_stratified_One(dataset_full = dataset_full, optimal_splitting_percentage = percentage_to_calculate, timepoint = tail(timepoints_to_perform,1), end_timepoint = end_timepoint,meta_file = files,Ncomb = Ncomb,splitting_times = splitting_times)
-            Test_set_stratified_accuracy = telika[1]
-            Train_set_stratified_accuracy = telika[2]
-            trainsd = telika[3]
-            testsd = telika[4]
-            all_calculated_accuracies= c(all_calculated_accuracies,Test_set_stratified_accuracy)
-            best_splitting_percentage = c(best_splitting_percentage,percentage_to_calculate)
-          }
-          
-          return (best_splitting_percentage[which.max(all_calculated_accuracies)])
-        }
-        
-        # Assign the best percentage on a variable to use on the final calculations
-        optimal_splitting_percentage <- optimal_splitting_percentage(dataset_full = dataset_full)
-        
-        ###################### Initializing variables Combinations ########################################
-        Test_set_LOO_accuracy <- c()
-        Train_set_LOO_accuracy <-c()
-        Test_set_stratified_accuracy <- c()
-        Train_set_stratified_accuracy <- c()
-        trainsd <- c()
-        testsd <- c()
-        
-        ###################### Calculate Accuracies on timepoints Combinations ############################
-        
-        # Loop to create a model from every timepoint to the final timepoint as selected from the first loop
-        for (timepoint in timepoints_to_perform){
-          
-          LOOTeliko <- LOO_multilogreg_One(dataset_full = dataset_full, timepoint = timepoint,end_timepoint = end_timepoint,meta_file = files,Ncomb = Ncomb, splitting_times = splitting_times)
-          
-          Train_set_LOO_accuracy = c(Train_set_LOO_accuracy,LOOTeliko[1])
-          Test_set_LOO_accuracy = c(Test_set_LOO_accuracy,LOOTeliko[2])
-          
-          MultiLogReg_results <- multilogreg_stratified_One(dataset_full = dataset_full, optimal_splitting_percentage = optimal_splitting_percentage,timepoint =  timepoint,meta_file =  files, end_timepoint = end_timepoint, Ncomb = Ncomb,splitting_times = splitting_times)
-          
-          
-          Test_set_stratified_accuracy <- c(Test_set_stratified_accuracy,MultiLogReg_results[1])
-          Train_set_stratified_accuracy <- c(Train_set_stratified_accuracy, MultiLogReg_results[2])
-          trainsd <- c(trainsd, MultiLogReg_results[3])
-          testsd <- c(testsd, MultiLogReg_results[4])
-        }  
-        
-        
-        ###################### Save accuracies on the lists ######################################
-        
-        # Select the effects that created the model
-        effect = paste(effector_combinations[combination,],collapse = ' & ')
-        
-        # Adding to the lists in order to export the correct matrix
-        Train_sets_LOO = rbind (Train_sets_LOO, c(effect,rep(0,(ncol(dataset_full)-length(Train_set_LOO_accuracy)-1)),   Train_set_LOO_accuracy))
-        Test_sets_LOO  = rbind (Test_sets_LOO,  c(effect,rep(0,(ncol(dataset_full)-length(Test_set_LOO_accuracy)-1)),    Test_set_LOO_accuracy))
-        Test_sets_stratified_split  = rbind (Test_sets_stratified_split,  c(effect,rep(0,(ncol(dataset_full)-length(Test_set_stratified_accuracy)-1)), Test_set_stratified_accuracy))
-        Train_sets_stratified_split = rbind (Train_sets_stratified_split, c(effect,rep(0,(ncol(dataset_full)-length(Train_set_stratified_accuracy)-1)),Train_set_stratified_accuracy))
-        
       }
     }
-    
-    
-    
     
     
     ###################### Leave one out All #######################################
@@ -1239,13 +1383,13 @@ if (new_run==T || (new_run == F & action =='Continue')){
       
       # Create the matrix with columns the state on the timepoint, the metadata and as a response the state on the last timepoint
       logreg <- as.data.frame(matrix(NA,nrow = nrow(dataset_full),ncol = ncol(meta_file)))
-      colnames(logreg)= c(paste('Cluster_at',end_timepoint,sep = '_'), timepoint , colnames(meta_file)[3:ncol(meta_file)])
+      colnames(logreg)= c(paste('Cluster_at',end_timepoint,sep = '_'), timepoint , colnames(meta_file)[which(colnames(meta_file)%!in%c(Timepoints_column,Samples_column))])
       rownames(logreg)= rownames(dataset_full)
       
       for (modeling_sample in (rownames(dataset_full))){
-        subTab = meta_file[meta_file[,1] %in% modeling_sample & meta_file[,2] == as.numeric(end_timepoint), 3:ncol(meta_file)]
+        subTab = meta_file[meta_file[,Samples_column] %in% modeling_sample & meta_file[,Timepoints_column] == end_timepoint, which(colnames(meta_file)%!in%c(Timepoints_column,Samples_column)),drop=F]##############!!!!!!!!!!!!
         if (nrow(subTab) == 1){
-          logreg[modeling_sample, colnames(meta_file)[3:ncol(meta_file)]] = subTab[1,]
+          logreg[modeling_sample, colnames(meta_file)[which(colnames(meta_file)%!in%c(Timepoints_column,Samples_column))]] = subTab[1,]
         }
         logreg[modeling_sample, 2] = ifelse(test = length(dataset_full[modeling_sample,timepoint]), yes = dataset_full[modeling_sample,timepoint], no = NA)
         logreg[modeling_sample, 1] = ifelse(test = length(dataset_full[modeling_sample,as.character(end_timepoint)]), yes = dataset_full[modeling_sample,as.character(end_timepoint)], no = NA)
@@ -1253,6 +1397,16 @@ if (new_run==T || (new_run == F & action =='Continue')){
       
       # Remove NAs
       logreg = logreg[complete.cases(logreg),]
+      
+      right_columns <- c(1,2)
+      if (ncol(logreg)>2){
+        for (logreg_check in 3:ncol(logreg)){
+          if (length(unique(logreg[,(logreg_check)]))>1){
+            right_columns <- c(right_columns,logreg_check)
+          }
+        }
+      }
+      logreg <- logreg[,right_columns]
       
       # Set the response variable
       fo = as.formula(paste(paste('Cluster_at',end_timepoint,sep = '_'),'~.',sep = ''))
@@ -1291,19 +1445,30 @@ if (new_run==T || (new_run == F & action =='Continue')){
       
       # Create the matrix with columns the state on the timepoint, the metadata and as a response the state on the last timepoint
       logreg <- as.data.frame(matrix(NA,nrow = nrow(dataset_full),ncol = ncol(meta_file)))
-      colnames(logreg)= c(paste('Cluster_at',end_timepoint,sep = '_'),timepoint,colnames(meta_file)[3:ncol(meta_file)])
+      colnames(logreg)= c(paste('Cluster_at',end_timepoint,sep = '_'),timepoint,colnames(meta_file)[which(colnames(meta_file)%!in%c(Timepoints_column,Samples_column))])
       rownames(logreg)= rownames(dataset_full)
       
       for (modeling_sample in (rownames(dataset_full))){
-        subTab = meta_file[meta_file[,1] %in% modeling_sample & meta_file[,2] == as.numeric(end_timepoint), 3:ncol(meta_file)]
+        subTab = meta_file[meta_file[,Samples_column] %in% modeling_sample & meta_file[,Timepoints_column] == end_timepoint, which(colnames(meta_file)%!in%c(Timepoints_column,Samples_column)),drop=F]######!!!!!!!!!
         if (nrow(subTab) == 1){
-          logreg[modeling_sample, colnames(meta_file)[3:ncol(meta_file)]] = subTab[1,]
+          logreg[modeling_sample, colnames(meta_file)[which(colnames(meta_file)%!in%c(Timepoints_column,Samples_column))]] = subTab[1,]
         }
         logreg[modeling_sample, 2] = ifelse(test = length(dataset_full[modeling_sample,timepoint]), yes = dataset_full[modeling_sample,timepoint], no = NA)
         logreg[modeling_sample, 1] = ifelse(test = length(dataset_full[modeling_sample,as.character(end_timepoint)]), yes = dataset_full[modeling_sample,as.character(end_timepoint)], no = NA)
       }
       # Remove NAs
       logreg = logreg[complete.cases(logreg),]
+      
+      right_columns <- c(1,2)
+      if (ncol(logreg)>2){
+        for (logreg_check in 3:ncol(logreg)){
+          if (length(unique(logreg[,(logreg_check)]))>1){
+            right_columns <- c(right_columns,logreg_check)
+          }
+        }
+      }
+      logreg <- logreg[,right_columns]
+      
       # Create different partitions to split train and test sets
       train_index <- createDataPartition(y = logreg[,paste('Cluster_at',end_timepoint,sep = '_')], p = optimal_splitting_percentage, list = F, times = splitting_times, groups = max(apply(X = logreg, MARGIN = 2, FUN = function(x){length(unique(x))})) )
       
@@ -1410,14 +1575,6 @@ if (new_run==T || (new_run == F & action =='Continue')){
   }
   
   
-  
-  ###################### Calculate all possible combinations of metadata calculated ##########################
-  Npredictions = 0
-  for (r in 1:length(effectors)){
-    Npredictions= Npredictions +(nrow(combinations(n = length(effectors),r = r,v = effectors,set = T,repeats.allowed = F)))
-  }
-  Npredictions = Npredictions +1
-  
   ###################### Write files of All Calculated Accuracies ############################################
   
   
@@ -1428,10 +1585,10 @@ if (new_run==T || (new_run == F & action =='Continue')){
   rownames(Train_sets_LOO)= Train_sets_LOO[,1]
   rownames(Test_sets_LOO) = Test_sets_LOO[,1]
   rownames(Test_sets_stratified_split)= Test_sets_stratified_split[,1]
-  Train_sets_stratified_split = Train_sets_stratified_split[,2:ncol(Train_sets_stratified_split)]
-  Test_sets_stratified_split = Test_sets_stratified_split[,2:ncol(Test_sets_stratified_split)]
-  Train_sets_LOO =Train_sets_LOO[,2:ncol(Train_sets_LOO)]
-  Test_sets_LOO = Test_sets_LOO[,2:ncol(Test_sets_LOO)]
+  Train_sets_stratified_split = Train_sets_stratified_split[,2:ncol(Train_sets_stratified_split),drop=F]
+  Test_sets_stratified_split = Test_sets_stratified_split[,2:ncol(Test_sets_stratified_split),drop=F]
+  Train_sets_LOO =Train_sets_LOO[,2:ncol(Train_sets_LOO),drop=F]
+  Test_sets_LOO = Test_sets_LOO[,2:ncol(Test_sets_LOO),drop=F]
   
   colnames(Train_sets_LOO) = c(paste('From timepoint ',rev(colnames(dataset_full)[1:ncol(dataset_full)-1]),sep = ''))
   colnames(Test_sets_LOO)  = c(paste('From timepoint ',rev(colnames(dataset_full)[1:ncol(dataset_full)-1]),sep = ''))
@@ -1447,7 +1604,7 @@ if (new_run==T || (new_run == F & action =='Continue')){
   
   # Counting indices
   row <- 1 ; column <- 0
-  
+  Npredictions <- length(unique(rownames(Train_sets_LOO)))
   
   # Calculate the maximum accuracy for every timepoint
   for (x in 1:ncol(Train_sets_LOO)){
@@ -1600,126 +1757,129 @@ if (new_run==T || (new_run == F & action =='Continue')){
   
   ###################### Plot Cluster Profiles on Higher Resolutions ##########################################
   
-  ## Plot Families on Clusters
-  Families = Family_clusters[apply(X = Family_clusters, 1,FUN = max)>threshold,]
-  Others = colSums(Family_clusters[!apply(X = Family_clusters, 1,FUN = max)>threshold,])
-  Family_representation= rbind(Families,Others)
-  
-  
-  v4=c()
-  
-  
-  for (i in colnames(samples_on_clusters)){
-    for (j in 1:max(samples_on_clusters[,i],na.rm = T)){
-      v4=c(v4,paste("TP",i,"Cl",j))
+  if (tax==1){
+    
+    ## Plot Families on Clusters
+    Families = Family_clusters[apply(X = Family_clusters, 1,FUN = max)>threshold,]
+    Others = colSums(Family_clusters[!apply(X = Family_clusters, 1,FUN = max)>threshold,])
+    Family_representation= rbind(Families,Others)
+    
+    
+    v4=c()
+    
+    
+    for (i in colnames(samples_on_clusters)){
+      for (j in 1:max(samples_on_clusters[,i],na.rm = T)){
+        v4=c(v4,paste("TP",i,"Cl",j))
+      }
     }
-  }
-  v4 <- factor(v4,levels = unique(v4))
-  
-  
-  
-  v1=c()
-  v2=c()
-  v3=c()
-  
-  for (col in colnames(Family_representation)){
-    for (row in rownames(Family_representation)){
-      
-      v1=c(v1,gsub('Timepoint', 'TP', gsub('cluster', 'Cl',col)))
-      v2=c(v2,row)
-      v3=c(v3,Family_representation[row,col])
+    v4 <- factor(v4,levels = unique(v4))
+    
+    
+    
+    v1=c()
+    v2=c()
+    v3=c()
+    
+    for (col in colnames(Family_representation)){
+      for (row in rownames(Family_representation)){
+        
+        v1=c(v1,gsub("Timepoint", 'TP', gsub('cluster', 'Cl',col)))
+        v2=c(v2,row)
+        v3=c(v3,Family_representation[row,col])
+      }
     }
-  }
-  
-  df= data.frame(Cluster=v1,Family = v2,Value=v3)
-  df$Cluster<- factor(df$Cluster, levels=v4)
-  
-  
-  
-  famplot = ggplot(df, aes(fill=Family, y=Value, x=Cluster)) + 
-    geom_bar(position="stack", stat="identity") +
-    ggtitle("Family Representation") +
-    xlab("Cluster")+
-    coord_flip()+
-    ylab("Percentage")
-  
-  
-  
-  ggsave(filename = paste(paste(output_dir,'Taxonomic Representation of Clusters',sep='/'),'Families_on_Clusters.pdf',sep = '/'),plot = famplot)
-  jpeg(filename = paste0(output_dir,'/Taxonomic Representation of Clusters/Families_on_Clusters.jpeg'), width = 800,height=842)
-  show(famplot)
-  dev.off()
-  
-  ## Plot Orders on Clusters
-  Orders = Order_clusters[apply(X = Order_clusters, 1,FUN = max)>threshold,]
-  Others = colSums(Order_clusters[!apply(X = Order_clusters, 1,FUN = max)>threshold,])
-  Order_representation= rbind(Orders,Others)
-  
-  
-  v1=c()
-  v2=c()
-  v3=c()
-  for (col in colnames(Order_representation)){
-    for (row in rownames(Order_representation)){
-      
-      v1=c(v1,gsub('Timepoint', 'TP', gsub('cluster', 'Cl',col)))
-      v2=c(v2,row)
-      v3=c(v3,Order_representation[row,col])
+    
+    df= data.frame(Cluster=v1,Family = v2,Value=v3)
+    df$Cluster<- factor(df$Cluster, levels=v4)
+    
+    
+    
+    famplot = ggplot(df, aes(fill=Family, y=Value, x=Cluster)) + 
+      geom_bar(position="stack", stat="identity") +
+      ggtitle("Family Representation") +
+      xlab("Cluster")+
+      coord_flip()+
+      ylab("Percentage")
+    
+    
+    
+    ggsave(filename = paste(paste(output_dir,'Taxonomic Representation of Clusters',sep='/'),'Families_on_Clusters.pdf',sep = '/'),plot = famplot)
+    jpeg(filename = paste0(output_dir,'/Taxonomic Representation of Clusters/Families_on_Clusters.jpeg'), width = 800,height=842)
+    show(famplot)
+    dev.off()
+    
+    ## Plot Orders on Clusters
+    Orders = Order_clusters[apply(X = Order_clusters, 1,FUN = max)>threshold,]
+    Others = colSums(Order_clusters[!apply(X = Order_clusters, 1,FUN = max)>threshold,])
+    Order_representation= rbind(Orders,Others)
+    
+    
+    v1=c()
+    v2=c()
+    v3=c()
+    for (col in colnames(Order_representation)){
+      for (row in rownames(Order_representation)){
+        
+        v1=c(v1,gsub("Timepoint", 'TP', gsub('cluster', 'Cl',col)))
+        v2=c(v2,row)
+        v3=c(v3,Order_representation[row,col])
+      }
     }
-  }
-  
-  df= data.frame(Cluster=v1,Order = v2,Value=v3)
-  df$Cluster<- factor(df$Cluster,levels=v4)
-  
-  
-  famplot = ggplot(df, aes(fill=Order, y=Value, x=Cluster)) + 
-    geom_bar(position="stack", stat="identity") +
-    ggtitle("Order Representation") +
-    xlab("Cluster")+
-    coord_flip()+
-    ylab("Percentage")
-  
-  
-  
-  ggsave(filename = paste(paste(output_dir,'Taxonomic Representation of Clusters',sep='/'),'Orders_on_Clusters.pdf',sep = '/'),plot = famplot)
-  jpeg  (filename = paste(paste(output_dir,'Taxonomic Representation of Clusters',sep='/'),'Orders_on_Clusters.jpeg',sep = '/'),width = 800,height=842)
-  show(famplot)
-  dev.off()
-  
-  ## Plot Classes on Clusters
-  Classes = Class_clusters[apply(X = Class_clusters, 1,FUN = max)>threshold,]
-  Others = colSums(Class_clusters[!apply(X = Class_clusters, 1,FUN = max)>threshold,])
-  Class_representation= rbind(Classes,Others)
-  
-  
-  v1=c()
-  v2=c()
-  v3=c()
-  for (col in colnames(Class_representation)){  
-    for (row in rownames(Class_representation)){
-      
-      v1=c(v1,gsub('Timepoint', 'TP', gsub('cluster', 'Cl',col)))
-      v2=c(v2,row)
-      v3=c(v3,Class_representation[row,col])
+    
+    df= data.frame(Cluster=v1,Order = v2,Value=v3)
+    df$Cluster<- factor(df$Cluster,levels=v4)
+    
+    
+    famplot = ggplot(df, aes(fill=Order, y=Value, x=Cluster)) + 
+      geom_bar(position="stack", stat="identity") +
+      ggtitle("Order Representation") +
+      xlab("Cluster")+
+      coord_flip()+
+      ylab("Percentage")
+    
+    
+    
+    ggsave(filename = paste(paste(output_dir,'Taxonomic Representation of Clusters',sep='/'),'Orders_on_Clusters.pdf',sep = '/'),plot = famplot)
+    jpeg  (filename = paste(paste(output_dir,'Taxonomic Representation of Clusters',sep='/'),'Orders_on_Clusters.jpeg',sep = '/'),width = 800,height=842)
+    show(famplot)
+    dev.off()
+    
+    ## Plot Classes on Clusters
+    Classes = Class_clusters[apply(X = Class_clusters, 1,FUN = max)>threshold,]
+    Others = colSums(Class_clusters[!apply(X = Class_clusters, 1,FUN = max)>threshold,])
+    Class_representation= rbind(Classes,Others)
+    
+    
+    v1=c()
+    v2=c()
+    v3=c()
+    for (col in colnames(Class_representation)){  
+      for (row in rownames(Class_representation)){
+        
+        v1=c(v1,gsub("Timepoint", 'TP', gsub('cluster', 'Cl',col)))
+        v2=c(v2,row)
+        v3=c(v3,Class_representation[row,col])
+      }
     }
+    
+    df= data.frame(Cluster=v1,Class = v2,Value=v3)
+    df$Cluster<- factor(df$Cluster,levels=v4)
+    
+    famplot = ggplot(df, aes(fill=Class, y=Value, x=Cluster)) + 
+      geom_bar(position="stack", stat="identity") +
+      ggtitle("Class Representation") +
+      xlab("Cluster")+
+      coord_flip()+
+      ylab("Percentage")
+    
+    
+    
+    ggsave(filename = paste(paste(output_dir,'Taxonomic Representation of Clusters',sep='/'),'Classes_on_Clusters.pdf',sep = '/'),plot = famplot)
+    jpeg  (filename = paste(paste(output_dir,'Taxonomic Representation of Clusters',sep='/'),'Classes_on_Clusters.jpeg',sep = '/'),width = 800,height=842)
+    show(famplot)
+    dev.off()
   }
-  
-  df= data.frame(Cluster=v1,Class = v2,Value=v3)
-  df$Cluster<- factor(df$Cluster,levels=v4)
-  
-  famplot = ggplot(df, aes(fill=Class, y=Value, x=Cluster)) + 
-    geom_bar(position="stack", stat="identity") +
-    ggtitle("Class Representation") +
-    xlab("Cluster")+
-    coord_flip()+
-    ylab("Percentage")
-  
-  
-  
-  ggsave(filename = paste(paste(output_dir,'Taxonomic Representation of Clusters',sep='/'),'Classes_on_Clusters.pdf',sep = '/'),plot = famplot)
-  jpeg  (filename = paste(paste(output_dir,'Taxonomic Representation of Clusters',sep='/'),'Classes_on_Clusters.jpeg',sep = '/'),width = 800,height=842)
-  show(famplot)
-  dev.off()
   
   ###################### Write files of Best Accuracies Test_sets_LOO ###########################################
   
@@ -1784,8 +1944,8 @@ if (new_run==T || (new_run == F & action =='Continue')){
   ###################### Write the  final Metadata table ########################################
   
   final_table=c()
-  for (tp in unique(meta_file[,2])){
-    samples_on_timepoint = meta_file[meta_file[,2]==tp,]
+  for (tp in unique(meta_file[,Timepoints_column])){
+    samples_on_timepoint = meta_file[meta_file[,Timepoints_column]==tp,]
     Cluster = paste("Cl", samples_on_clusters[samples_on_timepoint[,1],tp],sep = ':')
     Meta_with_cluster_assignment = cbind(samples_on_timepoint,Cluster)
     final_table= rbind(final_table,Meta_with_cluster_assignment)
@@ -1797,64 +1957,65 @@ if (new_run==T || (new_run == F & action =='Continue')){
   
   ###################### Perform Chi-square analysis to check metadata influence on T0 #####################
   
-  # Create a matrix to check for the effect of the metadata on the first timepoint (T0)
-  chimatrix = matrix (NA, ncol = length(effectors)+1, nrow = nrow(dataset_full))
-  
-  # Assign the rownames to the matrix
-  rownames(chimatrix) = rownames(dataset_full)
-  
-  # Assign the values on the matrix
-  chimatrix[,1] = dataset_full[,1]
-  
-  for (chirow in rownames(dataset_full)){
+  if (ncol(meta_file)>2){
+    # Create a matrix to check for the effect of the metadata on the first timepoint (T0)
+    chimatrix = matrix (NA, ncol = length(effectors)+1, nrow = nrow(dataset_full))
     
-    subTab = as.matrix(meta_file[meta_file[,'Sample']==chirow & meta_file[,'Timepoint']==1,3:ncol(meta_file)])
+    # Assign the rownames to the matrix
+    rownames(chimatrix) = rownames(dataset_full)
     
-    if (length(subTab)){
-      chimatrix[chirow,2:ncol(chimatrix)] = subTab
-    }
-  }
-  chimatrix = chimatrix[complete.cases(chimatrix),]
-  
-  Nuniq = length(unique(chimatrix[,1]))
-  
-  Significant_metadata = c()
-  for (metadatum in 2:ncol(chimatrix)){
+    # Assign the values on the matrix
+    chimatrix[,1] = dataset_full[,1]
     
-    chi_square_value = 0
-    dof = 0
-    
-    for (secondstate in unique(chimatrix[,metadatum])){
+    for (chirow in rownames(dataset_full)){
       
-      expected = sum(chimatrix[,metadatum]==secondstate) * (1/length(unique(chimatrix[,1])))
+      subTab = as.matrix(meta_file[meta_file[,Samples_column]==chirow & meta_file[,Timepoints_column]==tps[1],which(colnames(meta_file)%!in%c(Timepoints_column,Samples_column))])
       
-      for (firstcluster in unique(chimatrix[,1])){
-        dof = dof + 1
-        observed = sum(chimatrix[chimatrix[,metadatum]== secondstate,1]==firstcluster)
-        chi_square_value = chi_square_value + ((observed- expected)**2)/expected 
+      if (length(subTab)){
+        chimatrix[chirow,2:ncol(chimatrix)] = subTab
       }
     }
+    chimatrix = chimatrix[complete.cases(chimatrix),]
     
-    Null_hypothesis = chi_square_value <= qchisq(.95, df = (dof-1),lower.tail = T)
-    Significant_metadata[metadatum] = Null_hypothesis
+    Nuniq = length(unique(chimatrix[,1]))
+    
+    Significant_metadata = c()
+    for (metadatum in 2:ncol(chimatrix)){
+      
+      chi_square_value = 0
+      dof = 0
+      
+      for (secondstate in unique(chimatrix[,metadatum])){
+        
+        expected = sum(chimatrix[,metadatum]==secondstate) * (1/length(unique(chimatrix[,1])))
+        
+        for (firstcluster in unique(chimatrix[,1])){
+          dof = dof + 1
+          observed = sum(chimatrix[chimatrix[,metadatum]== secondstate,1]==firstcluster)
+          chi_square_value = chi_square_value + ((observed- expected)**2)/expected 
+        }
+      }
+      
+      Null_hypothesis = chi_square_value <= qchisq(.95, df = (dof-1),lower.tail = T)
+      Significant_metadata[metadatum] = Null_hypothesis
+    }
+    
+    Significant_metadata = Significant_metadata[2:length(Significant_metadata)]
+    
+    if (any(Significant_metadata)){
+      Significant_metadata = colnames(meta_file)[which(colnames(meta_file)%!in%c(Timepoints_column,Samples_column))][Significant_metadata]
+    }
+    
+    print (paste('For the clustering fate on the first timepoint', paste(ifelse(test = Significant_metadata, yes = Significant_metadata, no = 'No'), 'metadata are significant.', sep = ' '), sep = ' '))
+    
   }
   
-  Significant_metadata = Significant_metadata[2:length(Significant_metadata)]
-  
-  if (any(Significant_metadata)){
-    Significant_metadata = colnames(meta_file)[3:ncol(meta_file)][Significant_metadata]
+  if (length(tps)>2){
+    print (paste('The transitions among timepoints ',ifelse(test = Markovian_property, yes = 'are Markovian', no = 'are NOT Markovian'),sep = ' '))
   }
-  
-  
-  print (paste('The transitions among timepoints ',ifelse(test = Markovian_property, yes = 'are Markovian', no = 'are NOT Markovian'),sep = ' '))
-  print (paste('For the clustering fate on the first timepoint', paste(ifelse(test = Significant_metadata, yes = Significant_metadata, no = 'No'), 'metadata are significant.', sep = ' '), sep = ' '))
   print (' Analysis Completed ')
   print ('_____________________________________________')
   print ('Results are saved in the preselected folders ')
   print ('_____________________________________________')
   
-  
-  
-} else {
-  print (paste('Cronos has already run with the exact same parameters. The output files are stored in',sub(pattern = './',replacement = '',x = directory),sep = ' '))
 }
